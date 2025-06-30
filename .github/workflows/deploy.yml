@@ -1,44 +1,68 @@
-name: Deploy to Server
+name: Build and Deploy Bot
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Image"]
+  push:
     branches: [main]
-    types:
-      - completed
+
+env:
+  CONTAINER_NAME: "lunch-bot"
+  DOCKER_IMAGE: "lunch-bot-image"
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH and deploy
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY_PRIVATE }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            docker stop lunch-bot || true
-            docker rm lunch-bot || true
-            docker run -d \
-              --name lunch-bot \
-              -e TOKEN=${{ secrets.TOKEN }} \
-              -e ADMIN=${{ secrets.ADMIN }} \
-              -e MANAGER=${{ secrets.MANAGER }} \
-              -e FIX_SUM=${{ secrets.FIX_SUM }} \
-              -e currency=${{ secrets.CURRENCY }} \
-              -e LOG_FILE=${{ secrets.LOG_FILE }} \
-              -e PORT_DB=${{ secrets.PORT_DB }} \
-              -e USER_DB=${{ secrets.USER_DB }} \
-              -e PASSWORD_DB=${{ secrets.PASSWORD_DB }} \
-              -e HOST_DB=${{ secrets.HOST_DB }} \
-              -e DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-      - name: Restart bot
+      - uses: actions/checkout@v4
+
+      # Сборка Docker-образа
+      - name: Build Docker image
         run: |
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest && \
-          docker restart lunch-bot || true"
+          docker build -t $DOCKER_IMAGE .
+
+      # Сохранение образа в архив (для переноса на сервер)
+      - name: Save Docker image
+        run: docker save -o image.tar $DOCKER_IMAGE
+
+      # Настройка SSH-доступа
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_PRIVATE }}
+
+      - name: Setup known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      # Копирование образа на сервер и запуск
+      - name: Deploy to Server
+        run: |
+          # Копируем архив с образом
+          scp -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
+
+          # Подключаемся к серверу и разворачиваем контейнер
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Загружаем образ
+            docker load -i /tmp/image.tar
+            rm /tmp/image.tar
+
+            # Останавливаем старый контейнер (если есть)
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
+
+            # Запускаем новый контейнер
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -e TOKEN='${{ secrets.TOKEN }}' \
+              -e ADMIN='${{ secrets.ADMIN }}' \
+              -e MANAGER='${{ secrets.MANAGER }}' \
+              -e PORT_DB='${{ secrets.PORT_DB }}' \
+              -e USER_DB='${{ secrets.USER_DB }}' \
+              -e PASSWORD_DB='${{ secrets.PASSWORD_DB }}' \
+              -e HOST_DB='${{ secrets.HOST_DB }}' \
+              -e DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
+              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+              -e DATABASE_URL="mysql+asyncmy://${USER_DB}:${PASSWORD_DB}@${HOST_DB}/${DATABASE_NAME}"
+              $DOCKER_IMAGE
+          "
