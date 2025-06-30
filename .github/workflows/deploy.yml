@@ -42,7 +42,6 @@ jobs:
           # Копируем архив с образом
           scp -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
 
-          # Подключаемся к серверу и разворачиваем контейнер
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
             docker load -i /tmp/image.tar
             rm /tmp/image.tar
