@@ -50,7 +50,6 @@ jobs:
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
-            # Запускаем новый контейнер
             docker run -d \
               --name $CONTAINER_NAME \
               --restart unless-stopped \
