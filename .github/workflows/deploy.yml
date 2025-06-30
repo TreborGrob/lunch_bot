@@ -39,6 +39,6 @@ jobs:
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       - name: Restart bot
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
           "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest && \
           docker restart lunch-bot || true"
