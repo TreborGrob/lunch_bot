@@ -44,7 +44,6 @@ jobs:
 
           # Подключаемся к серверу и разворачиваем контейнер
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
-            # Загружаем образ
             docker load -i /tmp/image.tar
             rm /tmp/image.tar
 
