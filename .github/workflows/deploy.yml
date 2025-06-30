@@ -40,7 +40,7 @@ jobs:
           if ! ssh-keyscan -v -H -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>&1; then
             echo "Ошибка подключения. Пробуем альтернативные методы..."
             # Попробуйте использовать IP, если использовали домен
-            ssh-keyscan -H -p ${{ secrets.SSH_PORT }} retbot.ru >> ~/.ssh/known_hosts || true
+            ssh-keyscan -H -p ${{ secrets.SSH_PORT }} 81.177.141.146 >> ~/.ssh/known_hosts || true
           fi
 
           echo "Содержимое known_hosts:"
