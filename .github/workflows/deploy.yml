@@ -27,7 +27,7 @@ jobs:
       - name: Install SSH Key
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.SSH_KEY_PRIVATE }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Setup known hosts
         run: |
@@ -41,7 +41,7 @@ jobs:
           scp -P 22 image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
 
           # Подключаемся к серверу и разворачиваем контейнер
-          ssh -p 22 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -p 22 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
             # Загружаем образ
             docker load -i /tmp/image.tar
             rm /tmp/image.tar
@@ -62,7 +62,6 @@ jobs:
               -e PASSWORD_DB='${{ secrets.PASSWORD_DB }}' \
               -e HOST_DB='${{ secrets.HOST_DB }}' \
               -e DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
-              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
-              -e DATABASE_URL="mysql+asyncmy://${USER_DB}:${PASSWORD_DB}@${HOST_DB}/${DATABASE_NAME}"
+              -e DATABASE_URL="mysql+asyncmy://${{ secrets.USER_DB }}:${{ secrets.PASSWORD_DB }}@${{ secrets.HOST_DB }}/${{ secrets.DATABASE_NAME }}" \
               $DOCKER_IMAGE
-          "
+          EOF
