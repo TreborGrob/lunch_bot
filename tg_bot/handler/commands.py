@@ -30,17 +30,17 @@ async def clear(message: Message, state: FSMContext):
 
 
 @router.message(Command("refresh"))
-async def reload_menu(message: Message):
+async def reload_menu(message: Message, session: AsyncSession):
     if message.from_user.id == ADMIN or MANAGER:
-        await get_menu_by_kind()
+        await get_menu_by_kind(session)
         await message.answer("Меню обновлено!")
 
 
 @router.message(Command("start"))
-async def start_bot(message: Message, **data: dict):
+async def start_bot(message: Message, session: AsyncSession, **data: dict):
     connect = data["db"]
     user_id = message.from_user.id
-    user_table = User(connect)
+    user_table = User(session)
     user_data = await user_table.get_user_by_tg_id(user_id)
     if user_data:
         await message.answer("Бот для заказа обеда организации ООО'РАНДЕМ'\nВведи команду /menu,"
@@ -50,15 +50,14 @@ async def start_bot(message: Message, **data: dict):
 
 
 @router.message(F.contact)
-async def contact_getter(message: Message, **data: dict):
-    connect = data["db"]
+async def contact_getter(message: Message, session: AsyncSession, **data: dict):
     user_id = message.from_user.id
     user_name = message.from_user.first_name if message.from_user.first_name else message.from_user.last_name
     if message.contact.user_id == user_id:
         phone_number = message.contact.phone_number
         if re.fullmatch(r"[+]?\d{11}", phone_number):
             phone_number = int(phone_number[2:])
-            user_table = User(connect)
+            user_table = User(session)
             user = await user_table.get_user_by_phone(phone_number)
             if user and not user.telegram_id:
                 await user_table.update_user(phone_number, telegram_id=user_id, username=user_name)
@@ -75,21 +74,20 @@ async def contact_getter(message: Message, **data: dict):
 
 
 @router.message(Command("menu"))
-async def menu_command(message: Message, **data: dict):
-    connect = data["db"]
-    user_table = User(connect)
+async def menu_command(message: Message, session: AsyncSession, **data: dict):
+    user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
     if user_data:
         if user_data.status == StatusEmployee.WORK.value:
             date = await next_work_day_string()
             if date:
-                order_table = Order(connect)
+                order_table = Order(session)
                 order = await order_table.get_order_by_user_id_and_date(user_id, date)
                 if not order:
                     await order_table.create_order(user_id, date)
                 await message.answer("Выбери обед на следующий рабочий день",
-                                     reply_markup=await groups_markup(connect, user_id))
+                                     reply_markup=await groups_markup(session, user_id))
             else:
                 await message.answer("Технические неполадки сообщите администратору бота.")
         else:
@@ -112,11 +110,10 @@ async def calendar_load(message: Message, command: CommandObject, **data: dict):
 
 
 @router.message(Command("my_order"))
-async def my_order(message: Message, **data: dict):
+async def my_order(message: Message, session: AsyncSession, **data: dict):
     result_lines = []
     combined_dish_counter = defaultdict(int)
-    connect = data["db"]
-    user_table = User(connect)
+    user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
     if user_data:
@@ -125,16 +122,16 @@ async def my_order(message: Message, **data: dict):
         date_for_txt = current_date.strftime('%d.%m.%Y')
         user_id = message.from_user.id
         connect = data["db"]
-        order_table = Order(connect)
+        order_table = Order(session)
         order = await order_table.get_order_by_user_id_and_date_status(user_id, current_date_str,
                                                                        StatusOrder.CLOSE.value)
         text_msg = f"Обед на {date_for_txt}\n\n"
         if order:
-            items_order_table = ItemsOrder(connect)
+            items_order_table = ItemsOrder(session)
             items = await items_order_table.get_dishes_for_order(order.id)
 
             if items:
-                dish_counter = await dishes_in_side_items(items)
+                dish_counter = await dishes_in_side_items(items, session)
                 for dish, count in dish_counter.items():
                     combined_dish_counter[dish] += count
             for dish, count in combined_dish_counter.items():
@@ -148,17 +145,17 @@ async def my_order(message: Message, **data: dict):
 
 
 @router.message(Command("add_user"))
-async def add_users(message: Message, command: CommandObject, **data: dict):
+async def add_users(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
     connect = data["db"]
     if int(message.from_user.id) == ADMIN or MANAGER:
         arguments = command.args
         data_phones = arguments.split(" ")
-        user_table = User(connect)
+        user_table = User(session)
         text_msg = "Пользователи: "
         for phone in data_phones:
             if phone.isdigit():
                 text_msg += "\n" + phone
-                await user_table.add_user(phone)
+                await user_table.add_user(int(phone))
             text_msg += "\nдобавлены."
         await message.answer(text_msg)
     else:
@@ -166,17 +163,17 @@ async def add_users(message: Message, command: CommandObject, **data: dict):
 
 
 @router.message(Command("del_user"))
-async def delete_users(message: Message, command: CommandObject, **data: dict):
+async def delete_users(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
     connect = data["db"]
     if int(message.from_user.id) == ADMIN or MANAGER:
         arguments = command.args
         data_phones = arguments.split(" ")
-        user_table = User(connect)
+        user_table = User(session)
         text_msg = "Пользователи: "
         for phone in data_phones:
             if phone.isdigit():
                 text_msg += "\n" + phone
-                await user_table.delete_user(phone)
+                await user_table.delete_user(int(phone))
             text_msg += "\nудалены."
         await message.answer(text_msg)
     else:
@@ -199,13 +196,12 @@ async def commands_admin(message: Message):
 
 
 @router.message(Command("add_bread"))
-async def add_bread(message: Message, command: CommandObject, **data: dict):
-    connect = data["db"]
+async def add_bread(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
     if int(message.from_user.id) == ADMIN or MANAGER:
-        dish_table = Dish(connect)
+        dish_table = Dish(session)
         arguments = command.args
         data = arguments.split(" ")
-        group_table = Group(connect)
+        group_table = Group(session)
         groups = await group_table.get_all_groups()
         group_id = ""
         for group in groups:
@@ -213,14 +209,13 @@ async def add_bread(message: Message, command: CommandObject, **data: dict):
                 group_id = group.id
                 break
         await dish_table.create_dish("Хлеб", "5 гр.", data[-1], "мука, вода, яйцо", "",
-                                     40, group_id)
+                                     "40", group_id)
 
 
 @router.message(Command("set_status"))
-async def set_status(message: Message, command: CommandObject, **data: dict):
-    connect = data["db"]
+async def set_status(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
     if int(message.from_user.id) == ADMIN or MANAGER:
-        user_table = User(connect)
+        user_table = User(session)
         arguments = command.args
         data = arguments.split(" ")
         try:
@@ -245,6 +240,7 @@ async def lunch_picker_command(message: Message, session: AsyncSession):
 
 
 if __name__ == "__main__":
-    phone = "+79998887766"
-    if re.fullmatch(r"[+]?\d{11}", phone):
-        print(phone)
+    # phone = "+79998887766"
+    # if re.fullmatch(r"[+]?\d{11}", phone):
+    #     print(phone)
+    pass
