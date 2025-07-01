@@ -1,8 +1,6 @@
-name: Test SSH Connection
+name: Test SSH/SCP Connection
 
-on:
-  push:
-    branches: [main]
+on: [push]
 
 jobs:
   test-connection:
@@ -10,36 +8,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Настройка SSH-доступа
       - name: Install SSH Key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_PRIVATE }}
 
-      - name: Setup SSH known hosts
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
           chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
+          # Или использовать ваш вариант с ssh-keyscan
 
-          echo "Проверяем подключение..."
-          if ! ssh-keyscan -v -H -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>&1; then
-            echo "Ошибка подключения. Пробуем альтернативные методы..."
-            ssh-keyscan -H -p ${{ secrets.SSH_PORT }} 81.177.141.146 >> ~/.ssh/known_hosts || true
-          fi
-
-          echo "Содержимое known_hosts:"
-          cat ~/.ssh/known_hosts
-
-      # Создаем тестовый файл и копируем на сервер
-      - name: Test SCP transfer
+      - name: Test SSH connection
         run: |
-          echo "This is a test file" > testfile.txt
-          scp -P ${{ secrets.SSH_PORT }} testfile.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/testfile.txt
-          echo "Файл успешно скопирован"
+          echo "Testing SSH connection..."
+          ssh -p ${{ secrets.SSH_PORT }} -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful!'"
 
-      # Проверяем, что файл скопировался
-      - name: Verify file transfer
+      - name: Create test file
+        run: echo "This is a test file" > testfile.txt
+
+      - name: Test SFTP
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cat /tmp/testfile.txt && rm /tmp/testfile.txt"
+          echo "put testfile.txt /tmp/testfile.txt" > sftp_batch.txt
+          sftp -b sftp_batch.txt -P ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+
+      - name: Test SCP with verbose output
+        run: |
+          echo "Testing SCP connection with verbose output..."
+          scp -v -P ${{ secrets.SSH_PORT }} testfile.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/testfile.txt || true
+          echo "SCP exit code: $?"
+
+      - name: Check remote file
+        if: always()
+        run: |
+          echo "Checking if file exists on server..."
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "ls -la /tmp/testfile.txt || echo 'File not found'"
