@@ -14,6 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       # Сборка Docker-образа
       - name: Build Docker image
         run: |
@@ -22,14 +27,6 @@ jobs:
       # Сохранение образа в архив
       - name: Save Docker image
         run: docker save -o image.tar $DOCKER_IMAGE
-
-      # Настройка SSH (используем только один способ)
-      - name: Add SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       # Копирование и деплой
       - name: Deploy to Server
