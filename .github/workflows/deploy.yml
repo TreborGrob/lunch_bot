@@ -1,16 +1,16 @@
-name: Build and Deploy Bot
+name: Deploy with Docker Compose
 
 on:
   push:
     branches: [main]
 
 env:
-  CONTAINER_NAME: "lunch-bot"
-  DOCKER_IMAGE: "lunch-bot-image"
+  DEPLOY_DIR: /home/ubuntu/lunch-bot-deploy
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,51 +19,22 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Сборка Docker-образа
-      - name: Build Docker image
+      - name: Copy project files to server
         run: |
-          docker build -t $DOCKER_IMAGE .
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}" ./ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_DIR
 
-      # Сохранение образа в архив
-      - name: Save Docker image
-        run: docker save -o image.tar $DOCKER_IMAGE
-
-      # Копирование и деплой
-      - name: Deploy to Server
+      - name: Upload and decode .env
         run: |
-          scp -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
-
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash <<EOF
-            # Загрузка образа
-            docker load -i /tmp/image.tar
-            rm -f /tmp/image.tar
-
-            # Остановка старого контейнера
-            docker stop $CONTAINER_NAME 2>/dev/null || true
-            docker rm $CONTAINER_NAME 2>/dev/null || true
-
-            # Запуск нового контейнера
-            docker run -d \\
-              --name $CONTAINER_NAME \\
-              --restart=unless-stopped \\
-              -e TOKEN='$TOKEN' \\
-              -e ADMIN='$ADMIN' \\
-              -e MANAGER='$MANAGER' \\
-              -e PORT_DB='$PORT_DB' \\
-              -e USER_DB='$USER_DB' \\
-              -e PASSWORD_DB='$PASSWORD_DB' \\
-              -e HOST_DB='$HOST_DB' \\
-              -e DATABASE_NAME='$DATABASE_NAME' \\
-              $DOCKER_IMAGE
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+            mkdir -p $DEPLOY_DIR
+            echo "${{ secrets.ENV }}" | base64 -d > $DEPLOY_DIR/.env
           EOF
-        env:
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
-          TOKEN: ${{ secrets.TOKEN }}
-          ADMIN: ${{ secrets.ADMIN }}
-          MANAGER: ${{ secrets.MANAGER }}
-          PORT_DB: ${{ secrets.PORT_DB }}
-          USER_DB: ${{ secrets.USER_DB }}
-          PASSWORD_DB: ${{ secrets.PASSWORD_DB }}
-          HOST_DB: ${{ secrets.HOST_DB }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+
+      - name: Run Docker Compose
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+            cd $DEPLOY_DIR
+            docker-compose down
+            docker-compose up -d --build
+          EOF
