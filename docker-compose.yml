@@ -9,6 +9,8 @@ services:
       - .env
     depends_on:
       - mysql
+    entrypoint: ["/wait-for-mysql.sh", "mysql", "python", "main.py"]
+
 
   mysql:
     image: mysql:8

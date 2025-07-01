@@ -15,10 +15,6 @@ pip-delete-this-directory.txt
 *.swp
 *.swo
 
-# Docker
-docker-compose.yml
-docker-compose.*.yml
-
 # Логи
 *.log
 logs/
