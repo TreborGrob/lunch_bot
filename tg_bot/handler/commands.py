@@ -37,8 +37,7 @@ async def reload_menu(message: Message, session: AsyncSession):
 
 
 @router.message(Command("start"))
-async def start_bot(message: Message, session: AsyncSession, **data: dict):
-    connect = data["db"]
+async def start_bot(message: Message, session: AsyncSession):
     user_id = message.from_user.id
     user_table = User(session)
     user_data = await user_table.get_user_by_tg_id(user_id)
@@ -50,7 +49,7 @@ async def start_bot(message: Message, session: AsyncSession, **data: dict):
 
 
 @router.message(F.contact)
-async def contact_getter(message: Message, session: AsyncSession, **data: dict):
+async def contact_getter(message: Message, session: AsyncSession):
     user_id = message.from_user.id
     user_name = message.from_user.first_name if message.from_user.first_name else message.from_user.last_name
     if message.contact.user_id == user_id:
@@ -74,7 +73,7 @@ async def contact_getter(message: Message, session: AsyncSession, **data: dict):
 
 
 @router.message(Command("menu"))
-async def menu_command(message: Message, session: AsyncSession, **data: dict):
+async def menu_command(message: Message, session: AsyncSession):
     user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
@@ -95,8 +94,7 @@ async def menu_command(message: Message, session: AsyncSession, **data: dict):
 
 
 @router.message(Command("calendar"))
-async def calendar_load(message: Message, command: CommandObject, **data: dict):
-    connect = data["db"]
+async def calendar_load(message: Message, command: CommandObject):
     if int(message.from_user.id) == ADMIN:
         arguments = command.args
         data = arguments.split(" ")
@@ -110,7 +108,7 @@ async def calendar_load(message: Message, command: CommandObject, **data: dict):
 
 
 @router.message(Command("my_order"))
-async def my_order(message: Message, session: AsyncSession, **data: dict):
+async def my_order(message: Message, session: AsyncSession):
     result_lines = []
     combined_dish_counter = defaultdict(int)
     user_table = User(session)
@@ -121,7 +119,6 @@ async def my_order(message: Message, session: AsyncSession, **data: dict):
         current_date_str = current_date.strftime('%Y-%m-%d')
         date_for_txt = current_date.strftime('%d.%m.%Y')
         user_id = message.from_user.id
-        connect = data["db"]
         order_table = Order(session)
         order = await order_table.get_order_by_user_id_and_date_status(user_id, current_date_str,
                                                                        StatusOrder.CLOSE.value)
@@ -145,8 +142,7 @@ async def my_order(message: Message, session: AsyncSession, **data: dict):
 
 
 @router.message(Command("add_user"))
-async def add_users(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
-    connect = data["db"]
+async def add_users(message: Message, command: CommandObject, session: AsyncSession):
     if int(message.from_user.id) == ADMIN or MANAGER:
         arguments = command.args
         data_phones = arguments.split(" ")
@@ -163,8 +159,7 @@ async def add_users(message: Message, command: CommandObject, session: AsyncSess
 
 
 @router.message(Command("del_user"))
-async def delete_users(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
-    connect = data["db"]
+async def delete_users(message: Message, command: CommandObject, session: AsyncSession):
     if int(message.from_user.id) == ADMIN or MANAGER:
         arguments = command.args
         data_phones = arguments.split(" ")
@@ -196,36 +191,38 @@ async def commands_admin(message: Message):
 
 
 @router.message(Command("add_bread"))
-async def add_bread(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
+async def add_bread(message: Message, command: CommandObject, session: AsyncSession):
     if int(message.from_user.id) == ADMIN or MANAGER:
         dish_table = Dish(session)
         arguments = command.args
         data = arguments.split(" ")
         group_table = Group(session)
         groups = await group_table.get_all_groups()
+        amount = int(data[-1])
         group_id = ""
         for group in groups:
             if group.name.lower() == "выпечка":
                 group_id = group.id
                 break
-        await dish_table.create_dish("Хлеб", "5 гр.", data[-1], "мука, вода, яйцо", "",
+        await dish_table.create_dish("Хлеб", "5 гр.", amount, "мука, вода, яйцо", "",
                                      "40", group_id)
 
 
 @router.message(Command("set_status"))
-async def set_status(message: Message, command: CommandObject, session: AsyncSession, **data: dict):
+async def set_status(message: Message, command: CommandObject, session: AsyncSession):
     if int(message.from_user.id) == ADMIN or MANAGER:
         user_table = User(session)
         arguments = command.args
         data = arguments.split(" ")
+        phone_num = int(data[0])
         try:
             if re.fullmatch(r"\d{10}", data[0]):
                 if data[1].lower() == "отдых" or "больничный":
                     status = "relax"
                 else:
                     status = "office"
-                await user_table.update_user(data[0], status=status)
-                await message.answer(f"Статус {data[0]} обновлён на {data[1]}")
+                await user_table.update_user(phone_num, status=status)
+                await message.answer(f"Статус {phone_num} обновлён на {data[1]}")
         except Exception as e:
             await message.answer(f"Ошибка обновления статуса: {e}")
 
