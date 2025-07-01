@@ -28,7 +28,7 @@ jobs:
       - name: Save Docker image
         run: docker save -o image.tar $DOCKER_IMAGE
 
-      # Копирование и деплой
+      # Копирование и деплой.
       - name: Deploy to Server
         run: |
           scp -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
