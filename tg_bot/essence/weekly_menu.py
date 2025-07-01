@@ -1,10 +1,9 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
 from tg_bot.essence.dishes import DishData, DishModel
-
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 class DayModel(Base):
@@ -30,10 +29,10 @@ class WeeklyMenuModel(Base):
     day = relationship("DayModel", back_populates="dishes")
     dish = relationship("DishModel")
 
-    __table_args__ = (
-        {'mysql_engine': 'InnoDB'},
-        {'mysql_charset': 'utf8mb4'},
-    )
+    __table_args__ = {
+        'mysql_engine': 'InnoDB',
+        'mysql_charset': 'utf8mb4',
+    }
 
 
 class WeeklyMenu:

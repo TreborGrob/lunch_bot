@@ -6,13 +6,8 @@ from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from tg_bot.essence.base_model import Base
 from config import TOKEN, DATABASE_URL
-from tg_bot.essence.dishes import Dish
-from tg_bot.essence.groups import Group
-from tg_bot.essence.items_in_order import ItemsOrder
-from tg_bot.essence.orders import Order
-from tg_bot.essence.users import User
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.DatabaseMiddleware import register_global_middlewares
 from tg_bot.handler import commands, handlers
@@ -22,6 +17,7 @@ from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin
 
 
 async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
+    # Создаем движок и сессии
     engine = create_async_engine(
         DATABASE_URL,
         pool_size=10,
@@ -30,28 +26,17 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
     )
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
+    # Создаем все таблицы одним запросом
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # Инициализация данных и планировщика
     async with async_session() as session:
         # Устанавливаем команды бота
         await set_default_commands(bot)
 
-        # Инициализируем таблицы
-        dishes_table = Dish(session)
-        await dishes_table.create_table()
-
-        groups_table = Group(session)
-        await groups_table.create_table()
-
-        order_table = Order(session)
-        await order_table.create_table()
-
-        user_table = User(session)
-        await user_table.create_table()
-
-        items_order_table = ItemsOrder(session)
-        await items_order_table.create_table()
-
+        # Инициализируем данные (если нужно)
         weekly_menu_table = WeeklyMenu(session)
-        await weekly_menu_table.create_table()
         await weekly_menu_table.initialize_days()
 
         # Настраиваем планировщик задач

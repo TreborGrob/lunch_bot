@@ -3,10 +3,8 @@ from typing import List, Optional
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.mysql import insert
-
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 class GroupModel(Base):

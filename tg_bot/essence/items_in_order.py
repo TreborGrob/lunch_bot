@@ -1,10 +1,9 @@
 from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
 from tg_bot.essence.dishes import DishData, DishModel
-
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 class ItemsOrderModel(Base):

@@ -2,10 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 from sqlalchemy import Column, Integer, String, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.dialects.mysql import insert
-
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 @dataclass
@@ -27,11 +24,11 @@ class UserModel(Base):
     status = Column(String(10), default='office')  # CHECK constraint добавлен через __table_args__
     last_msg_id = Column(Integer)
 
-    __table_args__ = (
-        {'mysql_engine': 'InnoDB'},
-        {'mysql_charset': 'utf8mb4'},
-        {'mysql_check': "status IN ('office', 'relax')"},
-    )
+    __table_args__ = {
+        'mysql_engine': 'InnoDB',
+        'mysql_charset': 'utf8mb4',
+        'mysql_check': "status IN ('office', 'relax')",
+    }
 
 
 class User:

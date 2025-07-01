@@ -3,9 +3,8 @@ from typing import List, Optional
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 class DishModel(Base):

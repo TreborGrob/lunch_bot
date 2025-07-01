@@ -2,11 +2,9 @@ from dataclasses import dataclass
 from typing import List, Optional
 from sqlalchemy import Column, Integer, String, Date, Enum, select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.mysql import insert
 from tg_bot.services.statuses import StatusOrder
-
-Base = declarative_base()
+from tg_bot.essence.base_model import Base
 
 
 @dataclass
@@ -28,10 +26,10 @@ class OrderModel(Base):
     status = Column(String(20), default=StatusOrder.CREATE.value)
     date = Column(String, nullable=False)  # Можно использовать Date для дат
 
-    __table_args__ = (
-        {'mysql_engine': 'InnoDB'},
-        {'mysql_charset': 'utf8mb4'},
-    )
+    __table_args__ = {
+        'mysql_engine': 'InnoDB',
+        'mysql_charset': 'utf8mb4'
+    }
 
 
 class Order:
