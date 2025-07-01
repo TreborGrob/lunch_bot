@@ -19,58 +19,52 @@ jobs:
         run: |
           docker build -t $DOCKER_IMAGE .
 
-      # Сохранение образа в архив (для переноса на сервер)
+      # Сохранение образа в архив
       - name: Save Docker image
         run: docker save -o image.tar $DOCKER_IMAGE
 
-      # Настройка SSH-доступа
-      - name: Install SSH Key
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY_PRIVATE }}
-
-      - name: Setup SSH known hosts
+      # Настройка SSH (используем только один способ)
+      - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-          echo "Проверяем подключение..."
-          if ! ssh-keyscan -v -H -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>&1; then
-            echo "Ошибка подключения. Пробуем альтернативные методы..."
-            
-            ssh-keyscan -H -p 49422 81.177.141.146 >> ~/.ssh/known_hosts || true
-          fi
-
-          echo "Содержимое known_hosts:"
-          cat ~/.ssh/known_hosts
-
-      # Копирование образа на сервер и запуск
+      # Копирование и деплой
       - name: Deploy to Server
         run: |
-          # Копируем архив с образом
-          scp -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
+          scp -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
 
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            # Загрузка образа
             docker load -i /tmp/image.tar
-            rm /tmp/image.tar
+            rm -f /tmp/image.tar
 
-            # Останавливаем старый контейнер (если есть)
-            docker stop $CONTAINER_NAME || true
-            docker rm $CONTAINER_NAME || true
+            # Остановка старого контейнера
+            docker stop $CONTAINER_NAME 2>/dev/null || true
+            docker rm $CONTAINER_NAME 2>/dev/null || true
 
+            # Запуск нового контейнера
             docker run -d \
               --name $CONTAINER_NAME \
               --restart unless-stopped \
-              -e TOKEN='${{ secrets.TOKEN }}' \
-              -e ADMIN='${{ secrets.ADMIN }}' \
-              -e MANAGER='${{ secrets.MANAGER }}' \
-              -e PORT_DB='${{ secrets.PORT_DB }}' \
-              -e USER_DB='${{ secrets.USER_DB }}' \
-              -e PASSWORD_DB='${{ secrets.PASSWORD_DB }}' \
-              -e HOST_DB='${{ secrets.HOST_DB }}' \
-              -e DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
-              -e DATABASE_URL="mysql+asyncmy://${{ secrets.USER_DB }}:${{ secrets.PASSWORD_DB }}@${{ secrets.HOST_DB }}/${{ secrets.DATABASE_NAME }}" \
+              -e TOKEN='$TOKEN' \
+              -e ADMIN='$ADMIN' \
+              -e MANAGER='$MANAGER' \
+              -e PORT_DB='$PORT_DB' \
+              -e USER_DB='$USER_DB' \
+              -e PASSWORD_DB='$PASSWORD_DB' \
+              -e HOST_DB='$HOST_DB' \
+              -e DATABASE_NAME='$DATABASE_NAME' \
               $DOCKER_IMAGE
           EOF
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+          ADMIN: ${{ secrets.ADMIN }}
+          MANAGER: ${{ secrets.MANAGER }}
+          PORT_DB: ${{ secrets.PORT_DB }}
+          USER_DB: ${{ secrets.USER_DB }}
+          PASSWORD_DB: ${{ secrets.PASSWORD_DB }}
+          HOST_DB: ${{ secrets.HOST_DB }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
