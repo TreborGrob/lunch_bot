@@ -15,7 +15,6 @@ RUN pip install -r requirements.txt
 
 # Копируем приложение
 COPY tg_bot/ tg_bot/
-COPY wait-for-mysql.sh /wait-for-mysql.sh
 COPY config.py .
 COPY main.py .
 
