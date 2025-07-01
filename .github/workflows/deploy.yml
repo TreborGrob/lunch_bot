@@ -36,5 +36,5 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
             cd $DEPLOY_DIR
             docker compose down
-            docker compose up -d --build
+            docker compose up -d --build --remove-orphans --force-recreate
           EOF
