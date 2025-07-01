@@ -4,7 +4,7 @@ services:
   bot:
     build: .
     container_name: lunch-bot-ci
-    restart: unless-stopped
+    restart: no # unless-stopped
     env_file:
       - .env
     depends_on:
@@ -13,7 +13,7 @@ services:
   mysql:
     image: mysql:8
     container_name: mysql
-    restart: unless-stopped
+    restart: no # unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${PASSWORD_DB}
       MYSQL_DATABASE: ${DATABASE_NAME}
