@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  bot:
+    build: .
+    container_name: lunch-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PASSWORD_DB}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${USER_DB}
+      MYSQL_PASSWORD: ${PASSWORD_DB}
+    volumes:
+      - /opt/RobData:/var/lib/mysql
+    ports:
+      - "3306:3306"
