@@ -33,7 +33,7 @@ jobs:
         run: |
           scp -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
 
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash <<EOF
             # Загрузка образа
             docker load -i /tmp/image.tar
             rm -f /tmp/image.tar
@@ -43,20 +43,22 @@ jobs:
             docker rm $CONTAINER_NAME 2>/dev/null || true
 
             # Запуск нового контейнера
-            docker run -d \
-              --name $CONTAINER_NAME \
-              --restart=unless-stopped \
-              -e TOKEN='$TOKEN' \
-              -e ADMIN='$ADMIN' \
-              -e MANAGER='$MANAGER' \
-              -e PORT_DB='$PORT_DB' \
-              -e USER_DB='$USER_DB' \
-              -e PASSWORD_DB='$PASSWORD_DB' \
-              -e HOST_DB='$HOST_DB' \
-              -e DATABASE_NAME='$DATABASE_NAME' \
+            docker run -d \\
+              --name $CONTAINER_NAME \\
+              --restart=unless-stopped \\
+              -e TOKEN='$TOKEN' \\
+              -e ADMIN='$ADMIN' \\
+              -e MANAGER='$MANAGER' \\
+              -e PORT_DB='$PORT_DB' \\
+              -e USER_DB='$USER_DB' \\
+              -e PASSWORD_DB='$PASSWORD_DB' \\
+              -e HOST_DB='$HOST_DB' \\
+              -e DATABASE_NAME='$DATABASE_NAME' \\
               $DOCKER_IMAGE
           EOF
         env:
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
           TOKEN: ${{ secrets.TOKEN }}
           ADMIN: ${{ secrets.ADMIN }}
           MANAGER: ${{ secrets.MANAGER }}
