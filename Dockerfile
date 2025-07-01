@@ -12,6 +12,7 @@ WORKDIR /lunch_bot
 # Устанавливаем зависимости
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+RUN pip install cryptography
 
 # Копируем приложение
 COPY tg_bot/ tg_bot/
