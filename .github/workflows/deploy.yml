@@ -1,46 +1,76 @@
-name: Test SSH/SCP Connection
+name: Build and Deploy Bot
 
-on: [push]
+on:
+  push:
+    branches: [main]
+
+env:
+  CONTAINER_NAME: "lunch-bot"
+  DOCKER_IMAGE: "lunch-bot-image"
 
 jobs:
-  test-connection:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # Сборка Docker-образа
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_IMAGE .
+
+      # Сохранение образа в архив (для переноса на сервер)
+      - name: Save Docker image
+        run: docker save -o image.tar $DOCKER_IMAGE
+
+      # Настройка SSH-доступа
       - name: Install SSH Key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_PRIVATE }}
 
-      - name: Setup SSH
+      - name: Setup SSH known hosts
         run: |
           mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
           chmod 700 ~/.ssh
-          echo "${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
-          # Или использовать ваш вариант с ssh-keyscan
+          chmod 600 ~/.ssh/known_hosts
 
-      - name: Test SSH connection
+          echo "Проверяем подключение..."
+          if ! ssh-keyscan -v -H -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>&1; then
+            echo "Ошибка подключения. Пробуем альтернативные методы..."
+            
+            ssh-keyscan -H -p 49422 81.177.141.146 >> ~/.ssh/known_hosts || true
+          fi
+
+          echo "Содержимое known_hosts:"
+          cat ~/.ssh/known_hosts
+
+      # Копирование образа на сервер и запуск
+      - name: Deploy to Server
         run: |
-          echo "Testing SSH connection..."
-          ssh -p ${{ secrets.SSH_PORT }} -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful!'"
+          # Копируем архив с образом
+          scp -P ${{ secrets.SSH_PORT }} image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/image.tar
 
-      - name: Create test file
-        run: echo "This is a test file" > testfile.txt
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+            docker load -i /tmp/image.tar
+            rm /tmp/image.tar
 
-      - name: Test SFTP
-        run: |
-          echo "put testfile.txt /tmp/testfile.txt" > sftp_batch.txt
-          sftp -b sftp_batch.txt -P ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+            # Останавливаем старый контейнер (если есть)
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
 
-      - name: Test SCP with verbose output
-        run: |
-          echo "Testing SCP connection with verbose output..."
-          scp -v -P ${{ secrets.SSH_PORT }} testfile.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/testfile.txt || true
-          echo "SCP exit code: $?"
-
-      - name: Check remote file
-        if: always()
-        run: |
-          echo "Checking if file exists on server..."
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "ls -la /tmp/testfile.txt || echo 'File not found'"
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -e TOKEN='${{ secrets.TOKEN }}' \
+              -e ADMIN='${{ secrets.ADMIN }}' \
+              -e MANAGER='${{ secrets.MANAGER }}' \
+              -e PORT_DB='${{ secrets.PORT_DB }}' \
+              -e USER_DB='${{ secrets.USER_DB }}' \
+              -e PASSWORD_DB='${{ secrets.PASSWORD_DB }}' \
+              -e HOST_DB='${{ secrets.HOST_DB }}' \
+              -e DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
+              -e DATABASE_URL="mysql+asyncmy://${{ secrets.USER_DB }}:${{ secrets.PASSWORD_DB }}@${{ secrets.HOST_DB }}/${{ secrets.DATABASE_NAME }}" \
+              $DOCKER_IMAGE
+          EOF
