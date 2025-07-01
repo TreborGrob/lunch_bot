@@ -24,7 +24,7 @@ class OrderModel(Base):
     user_id = Column(Integer, nullable=False)  # Предполагается, что users(telegram_id) существует
     amount = Column(Integer, default=0)
     status = Column(String(20), default=StatusOrder.CREATE.value)
-    date = Column(String, nullable=False)  # Можно использовать Date для дат
+    date = Column(String(100), nullable=False)  # Можно использовать Date для дат
 
     __table_args__ = {
         'mysql_engine': 'InnoDB',
