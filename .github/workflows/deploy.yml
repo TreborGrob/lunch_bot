@@ -37,11 +37,11 @@ jobs:
             cd $DEPLOY_DIR
           
             # Удаляем конфликтующий контейнер, если он существует
-            docker rm -f lunch-bot || true
+            docker rm -f lunch-bot-ci || true
           
             # Удаляем старую сеть, если осталась
             docker network rm lunch-bot-deploy_default || true
           
             # Поднимаем сервис заново
-            nohup docker compose up -d --build --remove-orphans --force-recreate > /dev/null 2>&1 &
+            docker compose up -d --build --remove-orphans --force-recreate
           EOF
