@@ -43,5 +43,5 @@ jobs:
             docker network rm lunch-bot-deploy_default || true
           
             # Поднимаем сервис заново
-            docker compose up -d --build --remove-orphans --force-recreate
+            nohup docker compose up -d --build --remove-orphans --force-recreate > /dev/null 2>&1 &
           EOF
