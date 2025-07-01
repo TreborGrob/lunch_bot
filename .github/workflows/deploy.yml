@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  DEPLOY_DIR: /home/ubuntu/lunch-bot-deploy
+  DEPLOY_DIR: /root/lunch-bot-deploy
 
 jobs:
   deploy:
