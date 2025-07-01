@@ -28,7 +28,8 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
             mkdir -p $DEPLOY_DIR
-            echo "${{ secrets.ENV }}" | base64 -d > $DEPLOY_DIR/.env
+            echo '${{ secrets.ENV }}' | base64 --decode > $DEPLOY_DIR/.env && \
+            chmod 600 ${{ secrets.DEPLOY_PATH }}/.env
           EOF
 
       - name: Run Docker Compose
