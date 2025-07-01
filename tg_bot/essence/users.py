@@ -3,6 +3,7 @@ from typing import Optional, List
 from sqlalchemy import Column, Integer, String, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from tg_bot.essence.base_model import Base
+from sqlalchemy import CheckConstraint
 
 
 @dataclass
@@ -15,20 +16,18 @@ class UserData:
 
 
 class UserModel(Base):
-    """Модель SQLAlchemy для таблицы users"""
     __tablename__ = 'users'
 
     telegram_id = Column(Integer, unique=True, default=0)
     username = Column(String(50))
     phone_number = Column(Integer, primary_key=True, default=0)
-    status = Column(String(10), default='office')  # CHECK constraint добавлен через __table_args__
+    status = Column(String(10), default='office')
     last_msg_id = Column(Integer)
 
-    __table_args__ = {
-        'mysql_engine': 'InnoDB',
-        'mysql_charset': 'utf8mb4',
-        'mysql_check': "status IN ('office', 'relax')",
-    }
+    __table_args__ = (
+        CheckConstraint("status IN ('office', 'relax')", name="check_user_status"),
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'}
+    )
 
 
 class User:
