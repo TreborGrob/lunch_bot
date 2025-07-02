@@ -42,7 +42,7 @@ class User:
     async def get_user_by_tg_id(self, tg_id: int) -> Optional[UserData]:
         """Получает пользователя по telegram_id"""
         result = await self.session.execute(
-            select(UserModel).where(UserModel.telegram_id == tg_id)
+            select(UserModel).where(tg_id == UserModel.telegram_id)
         )
         user = result.scalar_one_or_none()
         return UserData(*user.__dict__.values()) if user else None
