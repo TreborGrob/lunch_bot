@@ -14,8 +14,7 @@ class DatabaseMiddleware(BaseMiddleware):
             data: Dict[str, Any],
     ) -> Any:
         async with self.session_pool() as session:
-            # Используем 'db' для совместимости с существующим кодом
-            data["db"] = session
+            data["session"] = session
             try:
                 return await handler(event, data)
             except Exception as e:
