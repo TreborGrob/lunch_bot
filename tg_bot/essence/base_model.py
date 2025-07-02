@@ -17,7 +17,6 @@ async def ensure_database_exists(db_url: str, db_name: str):
     )
     try:
         async with temp_engine.connect() as conn:
-            # Проверяем существование базы данных
             result = await conn.execute(
                 text(f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{db_name}'"))
             if not result.scalar():
