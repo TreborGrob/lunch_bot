@@ -4,6 +4,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
 
+from config import USER_DB
+
 Base = declarative_base()
 
 
@@ -22,6 +24,8 @@ async def ensure_database_exists(db_url: str, db_name: str):
                 await conn.execute(
                     text(f"CREATE DATABASE `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
                 logging.info(f"Database {db_name} created successfully")
+                await conn.execute(text(f"GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{USER_DB}'@'%'"))
+                await conn.execute(text("FLUSH PRIVILEGES"))
             else:
                 logging.info(f"Database {db_name} already exists")
 
