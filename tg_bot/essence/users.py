@@ -45,7 +45,11 @@ class User:
             select(UserModel).where(UserModel.telegram_id == tg_id)
         )
         user = result.scalar_one_or_none()
-        return UserData(*user.__dict__.values()) if user else None
+        if not user:
+            return None
+
+        data = {k: getattr(user, k) for k in ('telegram_id', 'username', 'phone_number', 'status', 'last_msg_id')}
+        return UserData(**data)
 
     async def get_user_by_phone(self, phone_number: int) -> Optional[UserData]:
         """Получает пользователя по номеру телефона"""
@@ -53,13 +57,21 @@ class User:
             select(UserModel).where(UserModel.phone_number == phone_number)
         )
         user = result.scalar_one_or_none()
-        return UserData(*user.__dict__.values()) if user else None
+        if not user:
+            return None
+
+        data = {k: getattr(user, k) for k in ('telegram_id', 'username', 'phone_number', 'status', 'last_msg_id')}
+        return UserData(**data)
 
     async def get_all_users(self) -> List[UserData]:
         """Получает всех пользователей"""
         result = await self.session.execute(select(UserModel))
         users = result.scalars().all()
-        return [UserData(*user.__dict__.values()) for user in users]
+        return [
+            UserData(
+                **{k: getattr(user, k) for k in ('telegram_id', 'username', 'phone_number', 'status', 'last_msg_id')})
+            for user in users
+        ]
 
     async def get_last_msg_id(self, user_id: int) -> Optional[int]:
         """Получает last_msg_id пользователя"""
