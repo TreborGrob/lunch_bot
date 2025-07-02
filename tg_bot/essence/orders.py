@@ -37,13 +37,21 @@ class OrderModel(Base):
 
 
 class Order:
+    _fields = ("id", "user_id", "dish_id", "amount", "status", "date")
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def create_table(self):
-        """Создает таблицу (обычно вызывается при старте приложения)"""
+        """Создает таблицу"""
         async with self.session.begin():
             await self.session.run_sync(Base.metadata.create_all)
+
+    def _to_order_data(self, order) -> Optional[OrderData]:
+        """Конвертирует SQLAlchemy модель в OrderData"""
+        if not order:
+            return None
+        return OrderData(**{f: getattr(order, f) for f in self._fields})
 
     async def create_order(self, user_id: int, date: str) -> Optional[int]:
         """
@@ -74,22 +82,32 @@ class Order:
             print(f"Error creating order: {e}")
             return None
 
+    async def _get_order_by_conditions(self, *conditions) -> Optional[OrderData]:
+        result = await self.session.execute(
+            select(OrderModel).where(*conditions)
+        )
+        return self._to_order_data(result.scalar_one_or_none())
+
+    async def _get_orders_by_conditions(self, *conditions) -> List[OrderData]:
+        result = await self.session.execute(
+            select(OrderModel).where(*conditions)
+        )
+        return [self._to_order_data(order) for order in result.scalars()]
+
     async def get_order_by_id(self, order_id: int) -> Optional[OrderData]:
         """Получает заказ по ID"""
         result = await self.session.execute(
             select(OrderModel).where(OrderModel.id == order_id)
         )
-        order = result.scalar_one_or_none()
-        return OrderData(*order.__dict__.values()) if order else None
+        return self._to_order_data(result.scalar_one_or_none())
 
     async def get_id_order_by_user_id_and_date(self, user_id: int, date: str,
-                                               status: str = StatusOrder.CREATE.value) -> Optional[int]:
-        """Получает ID заказа по user_id, дате и статусу"""
+                                             status: str = StatusOrder.CREATE.value) -> Optional[int]:
         result = await self.session.execute(
             select(OrderModel.id)
-            .where(OrderModel.user_id == user_id)
-            .where(OrderModel.date == date)
-            .where(OrderModel.status == status)
+            .where(OrderModel.user_id == user_id,
+                  OrderModel.date == date,
+                  OrderModel.status == status)
         )
         return result.scalar_one_or_none()
 
@@ -103,7 +121,7 @@ class Order:
             .where(OrderModel.status == status)
         )
         order = result.scalar_one_or_none()
-        return OrderData(*order.__dict__.values()) if order else None
+        return OrderData(**{f: getattr(order, f) for f in self._fields}) if order else None
 
     async def get_order_by_user_id_and_date(self, user_id: int, date: str) -> Optional[OrderData]:
         """Получает заказ по user_id и дате"""
@@ -113,33 +131,19 @@ class Order:
             .where(OrderModel.date == date)
         )
         order = result.scalar_one_or_none()
-        return OrderData(*order.__dict__.values()) if order else None
+        return OrderData(**{f: getattr(order, f) for f in self._fields}) if order else None
 
     async def get_all_orders_by_date(self, date: str) -> List[OrderData]:
-        """Получает все заказы на указанную дату"""
-        result = await self.session.execute(
-            select(OrderModel).where(OrderModel.date == date)
-        )
-        orders = result.scalars().all()
-        return [OrderData(*order.__dict__.values()) for order in orders]
+        return await self._get_orders_by_conditions(OrderModel.date == date)
 
     async def get_orders_by_user_id(self, user_id: int) -> List[OrderData]:
-        """Получает все заказы пользователя"""
-        result = await self.session.execute(
-            select(OrderModel).where(OrderModel.user_id == user_id)
-        )
-        orders = result.scalars().all()
-        return [OrderData(*order.__dict__.values()) for order in orders]
+        return await self._get_orders_by_conditions(OrderModel.user_id == user_id)
 
     async def get_confirm_orders_by_date(self, date: str) -> List[OrderData]:
-        """Получает все НЕ закрытые заказы на указанную дату"""
-        result = await self.session.execute(
-            select(OrderModel)
-            .where(OrderModel.status != StatusOrder.CLOSE.value)
-            .where(OrderModel.date == date)
+        return await self._get_orders_by_conditions(
+            OrderModel.status != StatusOrder.CLOSE.value,
+            OrderModel.date == date
         )
-        orders = result.scalars().all()
-        return [OrderData(*order.__dict__.values()) for order in orders]
 
     async def update_order(self, user_id: int, date: str, **kwargs):
         """Обновляет данные заказа"""

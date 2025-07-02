@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, update, delete, BigInteger
+from sqlalchemy import select, update, delete, BigInteger, Column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -36,6 +36,8 @@ class DishData:
 
 
 class Dish:
+    _fields = ('id', 'name', 'weight', 'amount', 'compound', 'image_url', 'calories', 'group_id')
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -44,37 +46,29 @@ class Dish:
         async with self.session.begin():
             await self.session.run_sync(Base.metadata.create_all)
 
-    # Create
-    async def create_dish(self, name: str, weight: str, amount: int,
-                          compound: str, image_url: Optional[str] = None,
-                          calories: Optional[str] = None,
-                          group_id: Optional[int] = None) -> Optional[int]:
+    def _to_dish_data(self, dish: DishModel) -> Optional[DishData]:
+        """Конвертирует SQLAlchemy модель в DishData"""
+        return DishData(**{f: getattr(dish, f) for f in self._fields}) if dish else None
+
+    async def _execute_query(self, query, is_many: bool = False):
+        """Выполняет запрос и возвращает результат"""
+        result = await self.session.execute(query)
+        return result.scalars().all() if is_many else result.scalar_one_or_none()
+
+    async def create_dish(self, **kwargs) -> Column[int] | None:  # Сомнительно !
         """
         Создает новое блюдо или возвращает ID существующего
         Возвращает ID блюда или None в случае ошибки
         """
         try:
-            dish = DishModel(
-                name=name,
-                weight=weight,
-                amount=amount,
-                compound=compound,
-                image_url=image_url,
-                calories=calories,
-                group_id=group_id
-            )
-
-            # Пытаемся добавить новое блюдо, игнорируя конфликты
+            dish = DishModel(**kwargs)
             self.session.add(dish)
             await self.session.flush()
 
-            # Если блюдо с таким именем уже существует, получаем его ID
-            if not dish.id:
-                result = await self.session.execute(
-                    select(DishModel.id).where(DishModel.name == name)
-                )
-                existing_dish = result.scalar_one_or_none()
-                return existing_dish
+            if not dish.id:  # Если ID не был сгенерирован (уже существует)
+                existing = await self._execute_query(
+                    select(DishModel.id).where(DishModel.name == kwargs['name']))
+                return existing
 
             await self.session.commit()
             return dish.id
@@ -83,30 +77,32 @@ class Dish:
             print(f"Error creating dish: {e}")
             return None
 
-    # Read
     async def get_dish_by_id(self, dish_id: int) -> Optional[DishData]:
         """Получает блюдо по ID"""
-        result = await self.session.execute(
-            select(DishModel).where(DishModel.id == dish_id)
+        dish = await self._execute_query(select(DishModel).where(DishModel.id == dish_id))
+        return self._to_dish_data(dish)
+
+    async def get_dish_by_name(self, name: str) -> Optional[DishData]:
+        """Получает блюдо по названию"""
+        dish = await self._execute_query(select(DishModel).where(DishModel.name == name))
+        return self._to_dish_data(dish)
+
+    async def get_dishes_by_condition(self, *conditions) -> List[DishData]:
+        """Универсальный метод для получения списка блюд по условиям"""
+        dishes = await self._execute_query(
+            select(DishModel).where(*conditions),
+            is_many=True
         )
-        dish = result.scalar_one_or_none()
-        return DishData(*dish.__dict__.values()) if dish else None
+        return [self._to_dish_data(d) for d in dishes]
 
     async def get_dish_by_group_id(self, group_id: int) -> List[DishData]:
         """Получает все блюда по group_id"""
-        result = await self.session.execute(
-            select(DishModel).where(DishModel.group_id == group_id)
-        )
-        dishes = result.scalars().all()
-        return [DishData(*dish.__dict__.values()) for dish in dishes]
+        return await self.get_dishes_by_condition(DishModel.group_id == group_id)
 
     async def get_all_dishes(self) -> List[DishData]:
         """Получает все блюда"""
-        result = await self.session.execute(select(DishModel))
-        dishes = result.scalars().all()
-        return [DishData(*dish.__dict__.values()) for dish in dishes]
+        return await self.get_dishes_by_condition()
 
-    # Update
     async def update_dish(self, dish_id: int, **kwargs):
         """Обновляет данные блюда"""
         try:
@@ -120,7 +116,6 @@ class Dish:
             await self.session.rollback()
             print(f"Error updating dish: {e}")
 
-    # Delete
     async def delete_dishes(self):
         """Удаляет все блюда (очищает таблицу)"""
         try:
@@ -129,8 +124,3 @@ class Dish:
         except Exception as e:
             await self.session.rollback()
             print(f"Error deleting dishes: {e}")
-
-    async def get_dish_by_name(self, dish_name: str):
-        result = await self.session.execute(select(DishModel).where(DishModel.name == dish_name))
-        dish = result.scalar_one_or_none()
-        return DishData(*dish.__dict__.values()) if dish else None
