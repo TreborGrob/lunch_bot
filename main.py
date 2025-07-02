@@ -63,8 +63,7 @@ async def main():
     storage = MemoryStorage()
     logging.basicConfig(level=logging.INFO)
 
-    base_db_url = DATABASE_URL.rsplit('/', 1)[0] + "/"
-    await ensure_database_exists(base_db_url, DATABASE_NAME)
+    await ensure_database_exists(DATABASE_URL, DATABASE_NAME)
 
     # Инициализация бота
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
