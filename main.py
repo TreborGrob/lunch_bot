@@ -6,8 +6,8 @@ from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from tg_bot.essence.base_model import Base, ensure_database_exists
-from config import TOKEN, DATABASE_URL, DATABASE_NAME
+from tg_bot.essence.base_model import Base
+from config import TOKEN, DATABASE_URL
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.DatabaseMiddleware import register_global_middlewares
 from tg_bot.handler import commands, handlers
@@ -62,8 +62,6 @@ async def main():
     # Настройка хранилища и логгирования
     storage = MemoryStorage()
     logging.basicConfig(level=logging.INFO)
-
-    await ensure_database_exists(DATABASE_URL, DATABASE_NAME)
 
     # Инициализация бота
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
