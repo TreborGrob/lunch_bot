@@ -45,7 +45,7 @@ async def start_bot(message: Message, session: AsyncSession):
         await message.answer("Бот для заказа обеда организации ООО'РАНДЕМ'\nВведи команду /menu,"
                              " чтобы заказать обед на следующий рабочий день.")
     else:
-        await message.answer("⬇Отправь контакт по кнопке⬇", reply_markup=await request_contact())
+        await message.answer("⬇Отправь контакт по кнопке⬇", reply_markup=request_contact())
 
 
 @router.message(F.contact)
