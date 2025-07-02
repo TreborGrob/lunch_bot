@@ -14,10 +14,8 @@ class ItemsOrderModel(Base):
     order_id = Column(Integer, ForeignKey('orders.id'), nullable=False)
     dish_id = Column(Integer, ForeignKey('dishes.id'), nullable=False)
     count = Column(Integer, default=0)
-
-    # Опциональные отношения (если нужны)
-    dish = relationship("DishModel", back_populates="orders")
-    order = relationship("OrderModel", back_populates="items")
+    dish = relationship("DishModel", back_populates="order_associations")
+    order = relationship("OrderModel", back_populates="item_associations")
 
 
 class ItemsOrder:

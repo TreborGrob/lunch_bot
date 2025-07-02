@@ -28,10 +28,7 @@ class OrderModel(Base):
     amount = Column(Integer, default=0)
     status = Column(String(20), default=StatusOrder.CREATE.value)
     date = Column(String(100), nullable=False)  # Можно использовать Date для дат
-    # Связь с промежуточной таблицей
-    items = relationship("ItemsOrderModel", back_populates="order")
-    # Связь с блюдами через промежуточную таблицу (опционально)
-    dishes = relationship("DishModel", secondary="items_order", back_populates="orders", viewonly=True)
+    item_associations = relationship("ItemsOrderModel", back_populates="order")
 
     __table_args__ = {
         'mysql_engine': 'InnoDB',
