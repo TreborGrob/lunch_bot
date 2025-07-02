@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from tg_bot.essence.base_model import Base
 
@@ -19,6 +20,10 @@ class DishModel(Base):
     image_url = Column(String(255))
     calories = Column(String(20))
     group_id = Column(Integer)
+    # Связь с промежуточной таблицей
+    order_associations = relationship("ItemsOrderModel", back_populates="dish")
+    # Связь с заказами через промежуточную таблицу (опционально, если нужен прямой доступ)
+    orders = relationship("OrderModel", secondary="items_order", back_populates="dishes", viewonly=True)
 
 
 @dataclass

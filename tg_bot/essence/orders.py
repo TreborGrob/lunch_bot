@@ -3,6 +3,8 @@ from typing import List, Optional
 from sqlalchemy import Column, Integer, String, Date, Enum, select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.orm import relationship
+
 from tg_bot.services.statuses import StatusOrder
 from tg_bot.essence.base_model import Base
 
@@ -11,6 +13,7 @@ from tg_bot.essence.base_model import Base
 class OrderData:
     id: int
     user_id: int
+    dish_id: int
     amount: int
     status: str
     date: str
@@ -25,6 +28,10 @@ class OrderModel(Base):
     amount = Column(Integer, default=0)
     status = Column(String(20), default=StatusOrder.CREATE.value)
     date = Column(String(100), nullable=False)  # Можно использовать Date для дат
+    # Связь с промежуточной таблицей
+    items = relationship("ItemsOrderModel", back_populates="order")
+    # Связь с блюдами через промежуточную таблицу (опционально)
+    dishes = relationship("DishModel", secondary="items_order", back_populates="orders", viewonly=True)
 
     __table_args__ = {
         'mysql_engine': 'InnoDB',
