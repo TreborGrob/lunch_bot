@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, List
-from sqlalchemy import Column, Integer, String, select, update, delete
+from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
 from tg_bot.essence.base_model import Base
 from sqlalchemy import CheckConstraint
@@ -18,9 +18,9 @@ class UserData:
 class UserModel(Base):
     __tablename__ = 'users'
 
-    telegram_id = Column(Integer, unique=True, default=0)
+    telegram_id = Column(BigInteger, unique=True, default=0)
     username = Column(String(50))
-    phone_number = Column(Integer, primary_key=True, default=0)
+    phone_number = Column(BigInteger, primary_key=True, default=0)
     status = Column(String(10), default='office')
     last_msg_id = Column(Integer)
 

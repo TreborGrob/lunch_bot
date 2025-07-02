@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, String
 from sqlalchemy.dialects.mysql import insert
 from tg_bot.essence.base_model import Base
 
@@ -11,7 +11,7 @@ class GroupModel(Base):
     """Модель SQLAlchemy для таблицы groups"""
     __tablename__ = 'groups'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(40), unique=True)
 
 

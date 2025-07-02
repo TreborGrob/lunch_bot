@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import Column, Integer, String, Date, Enum, select, update, delete, func
+from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import relationship
@@ -23,11 +23,11 @@ class OrderModel(Base):
     """Модель SQLAlchemy для таблицы orders"""
     __tablename__ = 'orders'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, nullable=False)  # Предполагается, что users(telegram_id) существует
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False)  # Предполагается, что users(telegram_id) существует
     amount = Column(Integer, default=0)
     status = Column(String(20), default=StatusOrder.CREATE.value)
-    date = Column(String(100), nullable=False)  # Можно использовать Date для дат
+    date = Column(Date, nullable=False)  # Можно использовать Date для дат
     item_associations = relationship("ItemsOrderModel", back_populates="order")
 
     __table_args__ = {

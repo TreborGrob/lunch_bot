@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete
+from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
@@ -10,9 +10,9 @@ class ItemsOrderModel(Base):
     """Модель SQLAlchemy для таблицы items_order"""
     __tablename__ = 'items_order'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('orders.id'), nullable=False)
-    dish_id = Column(Integer, ForeignKey('dishes.id'), nullable=False)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    order_id = Column(BigInteger, ForeignKey('orders.id'), nullable=False)
+    dish_id = Column(BigInteger, ForeignKey('dishes.id'), nullable=False)
     count = Column(Integer, default=0)
     dish = relationship("DishModel", back_populates="order_associations")
     order = relationship("OrderModel", back_populates="item_associations")

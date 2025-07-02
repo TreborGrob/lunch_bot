@@ -25,7 +25,7 @@ async def group_menu(
     if user_id is None:
         user_id = callback.from_user.id
 
-    group_id = callback.data.split("_")[-1]
+    group_id = int(callback.data.split("_")[-1])
     try:
         await callback.message.edit_text(
             "Выберите из блюд",

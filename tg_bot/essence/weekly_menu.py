@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, select, delete
+from sqlalchemy import Column, String, ForeignKey, select, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
@@ -10,7 +10,7 @@ class DayModel(Base):
     """Модель для дней недели"""
     __tablename__ = 'days'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(20), unique=True)
 
     # Связь с блюдами через relationship
@@ -21,9 +21,9 @@ class WeeklyMenuModel(Base):
     """Модель для связи дней недели с блюдами"""
     __tablename__ = 'weekly_menu'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    day_id = Column(Integer, ForeignKey('days.id'), nullable=False)
-    dish_id = Column(Integer, ForeignKey('dishes.id'), nullable=False)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    day_id = Column(BigInteger, ForeignKey('days.id'), nullable=False)
+    dish_id = Column(BigInteger, ForeignKey('dishes.id'), nullable=False)
 
     # Связи с другими таблицами
     day = relationship("DayModel", back_populates="dishes")

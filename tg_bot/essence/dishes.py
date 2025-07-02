@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -12,15 +12,16 @@ class DishModel(Base):
     """Модель SQLAlchemy для таблицы dishes"""
     __tablename__ = 'dishes'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(40), unique=True)
     weight = Column(String(20))
     amount = Column(Integer, nullable=False)
     compound = Column(Text)
     image_url = Column(String(255))
     calories = Column(String(20))
-    group_id = Column(Integer)
+    group_id = Column(BigInteger)
     order_associations = relationship("ItemsOrderModel", back_populates="dish")
+
 
 @dataclass
 class DishData:
