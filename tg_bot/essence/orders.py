@@ -17,6 +17,7 @@ class OrderData:
     amount: int
     status: str
     date: str
+    dish_id: Optional[int] = None
 
 
 class OrderModel(Base):
