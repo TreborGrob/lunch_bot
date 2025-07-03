@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, update, delete, BigInteger, Column
+from sqlalchemy import select, update, delete, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship

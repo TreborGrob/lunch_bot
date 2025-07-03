@@ -99,7 +99,7 @@ async def items_group_markup(group_id: int, session: AsyncSession, user_id: int)
     return builder.as_markup()
 
 
-async def cart_items_markup(dishes: list, session: AsyncSession) -> InlineKeyboardMarkup:
+async def cart_items_markup(dishes: list) -> InlineKeyboardMarkup:
     """Клавиатура корзины"""
     builder = InlineKeyboardBuilder()
 

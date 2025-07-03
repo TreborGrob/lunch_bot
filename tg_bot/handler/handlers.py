@@ -1,3 +1,4 @@
+import logging
 from asyncio.log import logger
 
 from aiogram import Router, F
@@ -76,6 +77,7 @@ async def add_item_in_cart(
             )
             await callback.answer()
     except Exception as e:
+        logging.error(e)
         await callback.answer("Произошла ошибка")
 
 
@@ -109,13 +111,14 @@ async def view_item(
         )
         await callback.answer()
     except Exception as e:
+        logging.error(e)
         await callback.answer("Произошла ошибка")
 
 
 @router.callback_query(F.data.startswith("del_cart_"))
 async def remove_item_in_cart(
         callback: CallbackQuery,
-        session: AsyncSession,  # Сессия будет автоматически инжектиться
+        session: AsyncSession,  # Сессия автоматически инжектиться
         user_id: int = None  # Можно добавить user_id как параметр
 ):
     if user_id is None:

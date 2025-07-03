@@ -105,11 +105,13 @@ async def dishes_in_side_items(dishes, session: AsyncSession):
 
 async def test_dish(session: AsyncSession):
     dishes_list = [[{'dish': DishData(id=1550, name='Сосиска из индейки, 1 шт.', weight='60 г.', amount=26, compound='',
-                                      image_url='https://domstolovaya.ru/upload/iblock/cfd/cfd814e7317a68ce8027b2d661e8f7d1.jpg',
+                                      image_url='https://domstolovaya.ru/upload/iblock/'
+                                                'cfd/cfd814e7317a68ce8027b2d661e8f7d1.jpg',
                                       calories='95.3', group_id=191), 'count': 1}, {
                         'dish': DishData(id=1552, name='Сырник', weight='60 г.', amount=31,
                                          compound='творог, яйцо, мука, специи',
-                                         image_url='https://domstolovaya.ru/upload/iblock/50a/50a337a4d86905e5bdd2b7a6a4ecc3dc.JPG',
+                                         image_url='https://domstolovaya.ru/upload/iblock/'
+                                                   '50a/50a337a4d86905e5bdd2b7a6a4ecc3dc.JPG',
                                          calories='218.5', group_id=191), 'count': 2}, {
                         'dish': DishData(id=1605, name='Мед', weight='20 г.', amount=11, compound='', image_url='',
                                          calories='65.8', group_id=197), 'count': 1}, {
@@ -121,12 +123,16 @@ async def test_dish(session: AsyncSession):
                                          image_url='', calories='61.2', group_id=197), 'count': 1}],
                    [{'dish': DishData(id=1552, name='Сырник', weight='60 г.', amount=31,
                                       compound='творог, яйцо, мука, специи',
-                                      image_url='https://domstolovaya.ru/upload/iblock/50a/50a337a4d86905e5bdd2b7a6a4ecc3dc.JPG',
-                                      calories='218.5', group_id=191), 'count': 1}, {'dish': DishData(id=1550, name='Сосиска из индейки, 1 шт.', weight='60 г.', amount=26, compound='',
-                                      image_url='https://domstolovaya.ru/upload/iblock/cfd/cfd814e7317a68ce8027b2d661e8f7d1.jpg',
+                                      image_url='https://domstolovaya.ru/upload/iblock/50a/'
+                                                '50a337a4d86905e5bdd2b7a6a4ecc3dc.JPG',
+                                      calories='218.5', group_id=191), 'count': 1},
+                    {'dish': DishData(id=1550, name='Сосиска из индейки, 1 шт.', weight='60 г.', amount=26, compound='',
+                                      image_url='https://domstolovaya.ru/upload/iblock/cfd/'
+                                                'cfd814e7317a68ce8027b2d661e8f7d1.jpg',
                                       calories='95.3', group_id=191), 'count': 2}, {
                         'dish': DishData(id=1557, name='Борщ с говядиной', weight='250 г.', amount=52, compound='',
-                                         image_url='https://domstolovaya.ru/upload/iblock/d64/d641f187543a8fbe56b19fe0018ab792.jpg',
+                                         image_url='https://domstolovaya.ru/upload/iblock/'
+                                                   'd64/d641f187543a8fbe56b19fe0018ab792.jpg',
                                          calories='100.5', group_id=192), 'count': 1}, {
                         'dish': DishData(id=1597, name='Медово-горчичный соус', weight='40 г.', amount=15, compound='',
                                          image_url='', calories='0.0', group_id=197), 'count': 1}, {

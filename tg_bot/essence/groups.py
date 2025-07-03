@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, delete, BigInteger
+from sqlalchemy import select, delete, BigInteger, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String
 from sqlalchemy.dialects.mysql import insert
@@ -55,6 +55,21 @@ class Group:
         except Exception as e:
             await self.session.rollback()
             print(f"Error creating group: {e}")
+            return None
+
+    async def get_group_by_name(self, group_name: str) -> Optional[GroupModel]:
+        """
+        Получает группу по названию (регистронезависимо)
+        Возвращает объект GroupModel или None если не найдено
+        """
+        try:
+            result = await self.session.execute(
+                select(GroupModel)
+                .where(func.lower(GroupModel.name) == func.lower(group_name))
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            print(f"Error getting group by name: {e}")
             return None
 
     async def get_all_groups(self) -> List[GroupData]:

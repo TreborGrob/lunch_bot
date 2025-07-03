@@ -10,9 +10,9 @@ from tg_bot.essence.users import User
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.services.create_text_total_lunch_order import lunch_picker
 from tg_bot.services.days_operations import days_week, next_work_day_string
-from tg_bot.services.parse_menu import get_day_text_page, parse_page
+from tg_bot.services.parse_menu import get_dict_all_dishes
 from tg_bot.services.send_message_bot import send_message_bot
-from tg_bot.services.statuses import StatusEmployee, StatusOrder
+from tg_bot.services.statuses import StatusOrder
 
 
 async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str):
@@ -45,7 +45,8 @@ async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str):
                     weight = dish['weight']
                     price = dish['price']
                     # Создаем блюдо и добавляем его в меню
-                    id_dish = await dishes_table.create_dish(dish_name, weight, price, group_id)
+                    id_dish = await dishes_table.create_dish(name=dish_name, weight=weight, amount=price,
+                                                             group_id=group_id)
                     await weekly_menu_table.add_dish_to_day(day_number + 1, id_dish)
         return True
     else:

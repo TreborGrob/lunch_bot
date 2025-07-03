@@ -102,12 +102,12 @@ class Order:
         return self._to_order_data(result.scalar_one_or_none())
 
     async def get_id_order_by_user_id_and_date(self, user_id: int, date: str,
-                                             status: str = StatusOrder.CREATE.value) -> Optional[int]:
+                                               status: str = StatusOrder.CREATE.value) -> Optional[int]:
         result = await self.session.execute(
             select(OrderModel.id)
             .where(OrderModel.user_id == user_id,
-                  OrderModel.date == date,
-                  OrderModel.status == status)
+                   OrderModel.date == date,
+                   OrderModel.status == status)
         )
         return result.scalar_one_or_none()
 
@@ -182,3 +182,25 @@ class Order:
         except Exception as e:
             await self.session.rollback()
             print(f"Error updating orders by date: {e}")
+
+    async def delete_orders_by_date(self, date):
+        """Удаляет заказы за указанную дату"""
+        try:
+            await self.session.execute(
+                delete(OrderModel).where(OrderModel.date == date)
+            )
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"Error deleting order: {e}")
+
+    async def delete_all_orders(self):
+        """Удаляет все заказы"""
+        try:
+            await self.session.execute(
+                delete(OrderModel)
+            )
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"Error deleting order: {e}")

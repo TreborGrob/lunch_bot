@@ -231,4 +231,3 @@ if __name__ == "__main__":
     # Получение списков
     # parse_calendar(file_calendar, "Лист1", 2024, months_matrix)
     print(asyncio.run(test_calendar()))
-

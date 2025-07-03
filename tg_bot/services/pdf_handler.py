@@ -20,7 +20,3 @@ async def get_text_from_pdf(path_pdf: str) -> str:
 
 if __name__ == "__main__":
     print(asyncio.run(get_text_from_pdf("C:\\Users\\Grob\\Documents\\МЕНЮ ПОСТНОЕ 2025 Г..pdf")))
-
-
-
-

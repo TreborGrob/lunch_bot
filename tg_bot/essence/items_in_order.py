@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger
+import logging
+
+from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
@@ -41,7 +43,7 @@ class ItemsOrder:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error adding dish to order: {e}")
+            logging.error(f"Error adding dish to order: {e}")
 
     async def get_dishes_for_order(self, order_id: int) -> list[dict]:
         """
@@ -51,7 +53,7 @@ class ItemsOrder:
         result = await self.session.execute(
             select(DishModel, ItemsOrderModel.count)
             .join(ItemsOrderModel, DishModel.id == ItemsOrderModel.dish_id)
-            .where(ItemsOrderModel.order_id == order_id)
+            .where(ItemsOrderModel.order_id == literal(order_id))
         )
 
         dishes = []
@@ -78,8 +80,8 @@ class ItemsOrder:
             # Получаем текущее количество
             count_result = await self.session.execute(
                 select(ItemsOrderModel.count)
-                .where(ItemsOrderModel.order_id == order_id)
-                .where(ItemsOrderModel.dish_id == dish_id)
+                .where(ItemsOrderModel.order_id == literal(order_id))
+                .where(ItemsOrderModel.dish_id == literal(dish_id))
             )
             count = count_result.scalar_one_or_none()
 
@@ -88,21 +90,21 @@ class ItemsOrder:
                     # Уменьшаем количество
                     await self.session.execute(
                         update(ItemsOrderModel)
-                        .where(ItemsOrderModel.order_id == order_id)
-                        .where(ItemsOrderModel.dish_id == dish_id)
+                        .where(ItemsOrderModel.order_id == literal(order_id))
+                        .where(ItemsOrderModel.dish_id == literal(dish_id))
                         .values(count=ItemsOrderModel.count - 1)
                     )
                 else:
                     # Удаляем полностью
                     await self.session.execute(
                         delete(ItemsOrderModel)
-                        .where(ItemsOrderModel.order_id == order_id)
-                        .where(ItemsOrderModel.dish_id == dish_id)
+                        .where(ItemsOrderModel.order_id == literal(order_id))
+                        .where(ItemsOrderModel.dish_id == literal(dish_id))
                     )
                 await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error removing dish from order: {e}")
+            logging.error(f"Error removing dish from order: {e}")
 
     async def get_amount_for_order(self, order_id: int) -> int:
         """
@@ -112,6 +114,17 @@ class ItemsOrder:
             select(func.coalesce(func.sum(DishModel.amount * ItemsOrderModel.count), 0))
             .select_from(ItemsOrderModel)
             .join(DishModel, DishModel.id == ItemsOrderModel.dish_id)
-            .where(ItemsOrderModel.order_id == order_id)
+            .where(ItemsOrderModel.order_id == literal(order_id))
         )
         return result.scalar_one()
+
+    async def delete_all_items_in_all_orders(self):
+        """Удаляет заказы за указанную дату"""
+        try:
+            result = await self.session.execute(delete(ItemsOrderModel))
+            deleted_count = result.rowcount
+            logging.info(f"Deleted {deleted_count} items from all orders")
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            logging.error(f"Error deleting order: {e}")

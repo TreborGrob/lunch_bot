@@ -8,7 +8,7 @@ from tg_bot.services.days_operations import next_work_day_string
 
 async def lunch_picker(session: AsyncSession) -> str:
     """
-    Формирует сводку заказов на следующий рабочий день
+    Формирует сводку заказов на следующий рабочий день.
     Возвращает отформатированную строку с информацией о заказах
     """
     next_work_date = await next_work_day_string()
