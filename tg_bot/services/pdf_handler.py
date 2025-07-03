@@ -1,6 +1,6 @@
 import asyncio
 
-import fitz  # PyMuPDF
+import fitz  # need PyMuPDF
 
 
 async def get_text_from_pdf(path_pdf: str) -> str:

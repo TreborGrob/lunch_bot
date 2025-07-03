@@ -14,6 +14,8 @@ from tg_bot.handler import commands, handlers
 from tg_bot.services.send_message_bot import send_report_admin
 from tg_bot.services.set_bot_commands import set_default_commands
 from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin
+from tg_bot.services.work_with_log import setup_logging
+from pytz import timezone
 
 
 async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
@@ -74,7 +76,7 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Настройка планировщика
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone=timezone('Europe/Moscow'))
     dp['scheduler'] = scheduler
     dp['session_pool'] = session_pool
 
@@ -103,6 +105,7 @@ async def main():
 
 if __name__ == '__main__':
     try:
+        setup_logging()
         if platform.system() == 'Windows':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())
