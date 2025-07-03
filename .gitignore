@@ -8,7 +8,7 @@ __pycache__/
 venv/
 pip-log.txt
 pip-delete-this-directory.txt
-
+test/
 # IDE
 .idea/
 .vscode/

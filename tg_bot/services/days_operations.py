@@ -152,7 +152,10 @@ def parse_calendar(file_path, sheet_name, year, months_matrix):
 
                 # Парсим значение как день
                 try:
-                    day = int(cell_value)
+                    if isinstance(cell_value, str):  # Проверяем, является ли cell_value строкой
+                        day = int(cell_value.rstrip('*'))  # Удаляем '*' и преобразуем в int
+                    else:
+                        day = int(cell_value)  # Если это уже число, просто преобразуем в int
                     day_str = f"{day:02d}"
                     date = f"{year}-{month:02d}-{day_str}"
 
@@ -207,6 +210,19 @@ def create_matrices():
     return months_matrices
 
 
+async def get_day_of_week(date_string):
+    # Преобразуем строку в объект даты
+    date_obj = datetime.strptime(date_string, '%Y-%m-%d')
+    # Возвращаем день недели (понедельник = 1, воскресенье = 7)
+    return date_obj.isoweekday()
+
+
+async def test_calendar():
+    months_matrix = create_matrices()
+    file_calendar = download_calendar_excel("https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx")
+    # Получение списков
+    parse_calendar(file_calendar, "Лист1", 2025, months_matrix)
+
 # Пример использования
 if __name__ == "__main__":
     # url_calendar = "https://mtsz.tatarstan.ru/file/pub/pub_3903989.xlsx"
@@ -214,4 +230,5 @@ if __name__ == "__main__":
     # file_calendar = download_calendar_excel(url_calendar)
     # Получение списков
     # parse_calendar(file_calendar, "Лист1", 2024, months_matrix)
-    print(asyncio.run(next_work_day_string()))
+    print(asyncio.run(test_calendar()))
+

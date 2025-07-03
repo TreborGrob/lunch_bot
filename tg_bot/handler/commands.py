@@ -30,10 +30,9 @@ async def clear(message: Message, state: FSMContext):
 
 
 @router.message(Command("refresh"))
-async def reload_menu(message: Message, session: AsyncSession):
-    if message.from_user.id == ADMIN or MANAGER:
-        await get_menu_by_kind(session)
-        await message.answer("Меню обновлено!")
+async def reload_menu(message: Message):
+    if int(message.from_user.id) in (ADMIN, MANAGER):
+        await message.answer("Пришли pdf файл с меню.")
 
 
 @router.message(Command("start"))
@@ -95,7 +94,7 @@ async def menu_command(message: Message, session: AsyncSession):
 
 @router.message(Command("calendar"))
 async def calendar_load(message: Message, command: CommandObject):
-    if int(message.from_user.id) == ADMIN:
+    if int(message.from_user.id) in (ADMIN, MANAGER):
         arguments = command.args
         data = arguments.split(" ")
         year = data[0]
@@ -143,7 +142,7 @@ async def my_order(message: Message, session: AsyncSession):
 
 @router.message(Command("add_user"))
 async def add_users(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) == ADMIN or MANAGER:
+    if int(message.from_user.id) in (ADMIN, MANAGER):
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -160,7 +159,7 @@ async def add_users(message: Message, command: CommandObject, session: AsyncSess
 
 @router.message(Command("del_user"))
 async def delete_users(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) == ADMIN or MANAGER:
+    if int(message.from_user.id) in (ADMIN, MANAGER):
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -179,7 +178,7 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
 async def commands_admin(message: Message):
     text_commands = ("/menu - меню\n"
                      "/my_order - мой заказ на сегодня\n")
-    if int(message.from_user.id) == ADMIN or MANAGER:
+    if int(message.from_user.id) in (ADMIN, MANAGER):
         text_commands += ("/refresh - обновление меню, использовать, если меню на сайте обновилось.\n"
                           "/set_status 9991234455 отпуск/больничный/работа - установка статуса\n"
                           "/add_user 9991234455 - добавление, можно несколько сразу, через пробел\n"
@@ -210,7 +209,7 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
 
 @router.message(Command("set_status"))
 async def set_status(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) == ADMIN or MANAGER:
+    if int(message.from_user.id) in (ADMIN, MANAGER):
         user_table = User(session)
         arguments = command.args
         data = arguments.split(" ")
@@ -229,11 +228,12 @@ async def set_status(message: Message, command: CommandObject, session: AsyncSes
 
 @router.message(Command("lunch_picker"))
 async def lunch_picker_command(message: Message, session: AsyncSession):
-    try:
-        text = await lunch_picker(session)
-        await message.answer(text, parse_mode="HTML")
-    except Exception as e:
-        await message.answer("Произошла ошибка при формировании заказов")
+    if int(message.from_user.id) in (ADMIN, MANAGER):
+        try:
+            text = await lunch_picker(session)
+            await message.answer(text, parse_mode="HTML")
+        except Exception as e:
+            await message.answer("Произошла ошибка при формировании заказов")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
 import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import MANAGER
+from config import MANAGER, ADMIN
 from tg_bot.essence.dishes import Dish
 from tg_bot.essence.groups import Group
+from tg_bot.essence.items_in_order import ItemsOrder
 from tg_bot.essence.orders import Order
 from tg_bot.essence.users import User
 from tg_bot.essence.weekly_menu import WeeklyMenu
@@ -14,44 +15,41 @@ from tg_bot.services.send_message_bot import send_message_bot
 from tg_bot.services.statuses import StatusEmployee, StatusOrder
 
 
-async def get_menu_by_kind(session: AsyncSession):
-    """
-    Парсит меню и сохраняет его в базу данных
-    """
-    dishes_table = Dish(session)
-    group_table = Group(session)
-    weekly_menu_table = WeeklyMenu(session)
+async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str):
+    # Получаем словарь всех блюд
+    dishes_dict = await get_dict_all_dishes(path_pdf_file)
+    if dishes_dict:
+        dishes_table = Dish(session)
+        group_table = Group(session)
+        weekly_menu_table = WeeklyMenu(session)
+        items_order_table = ItemsOrder(session)
+        orders_table = Order(session)
 
-    # Очищаем существующее меню
-    await dishes_table.delete_dishes()
-    await group_table.delete_groups()
-    await weekly_menu_table.remove_menu()
+        # Очищаем существующее меню
+        await dishes_table.delete_dishes()
+        await group_table.delete_groups()
+        await weekly_menu_table.remove_menu()
+        await items_order_table.delete_all_items_in_all_orders()
+        await orders_table.delete_all_orders()
 
-    # Парсим меню для каждого дня недели
-    for day_number, day_name in days_week.items():
-        text = get_day_text_page(day_name)
-        dishes_dict = parse_page(text)
-
-        for category, dishes in dishes_dict.items():
-            # Создаем группу блюд
-            group_id = await group_table.create_group(category)
-
-            # Добавляем блюда в группу
-            for dish_name, dish_info in dishes.items():
-                await dishes_table.create_dish(
-                    name=dish_name,
-                    weight=dish_info['weight'],
-                    amount=dish_info["price"],
-                    compound=dish_info['compound'],
-                    image_url=dish_info["image"],
-                    calories=dish_info['calories'],
-                    group_id=group_id
-                )
-
-                # Получаем ID последнего добавленного блюда
-                dish = await dishes_table.get_dish_by_name(dish_name)
-                if dish:
-                    await weekly_menu_table.add_dish_to_day(day_number + 1, dish.id)
+        # Парсим меню для каждого дня недели
+        for day, categories in dishes_dict.items():
+            # Находим номер дня
+            day_number = next(key for key, value in days_week.items() if value == day)
+            for category, dishes in categories.items():
+                # Создаем группу (категорию)
+                group_id = await group_table.create_group(category)
+                for dish in dishes:
+                    # Извлекаем данные блюда
+                    dish_name = dish['name']
+                    weight = dish['weight']
+                    price = dish['price']
+                    # Создаем блюдо и добавляем его в меню
+                    id_dish = await dishes_table.create_dish(dish_name, weight, price, group_id)
+                    await weekly_menu_table.add_dish_to_day(day_number + 1, id_dish)
+        return True
+    else:
+        return False
 
 
 async def reminder(session: AsyncSession):
@@ -68,22 +66,15 @@ async def reminder(session: AsyncSession):
     users = await users_table.get_all_users()
     orders = await order_table.get_all_orders_by_date(next_work_date)
 
+    # Создаем множество пользователей, у которых есть подтвержденный заказ
+    confirmed_users = {order.user_id for order in orders if order.status in
+                       {StatusOrder.CONFIRM.value, StatusOrder.CLOSE.value}}
+
     for user in users:
-        if user.status != StatusEmployee.WORK.value:
-            continue
-
-        needs_reminder = True
-        for order in orders:
-            if order.user_id == user.telegram_id and order.status == StatusOrder.CONFIRM.value:
-                needs_reminder = False
-                break
-
-        if needs_reminder:
-            await send_message_bot(
-                user.telegram_id,
-                f"Не забудь выбрать обед на {next_work_date} до 13:00!"
-            )
-            await asyncio.sleep(1)
+        if user.telegram_id:
+            if user.telegram_id not in confirmed_users:  # Если у пользователя нет подтвержденного заказа
+                await send_message_bot(user.telegram_id, f"Не забудь выбрать обед на {next_work_date} до 13:00!")
+                await asyncio.sleep(1)
 
 
 async def total_text_lunch_send_admin(session: AsyncSession):
@@ -116,9 +107,11 @@ async def total_text_lunch_send_admin(session: AsyncSession):
             text = "<code>" + text
         messages.append(text)
 
-    # Отправляем сообщения администратору
+    # Отправляем сообщения
     for message in messages:
         await send_message_bot(MANAGER, message)
+        await asyncio.sleep(1)
+        await send_message_bot(ADMIN, message)
         await asyncio.sleep(1)
 
     # Обновляем статусы заказов

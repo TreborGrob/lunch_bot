@@ -1,114 +1,176 @@
-from typing import Dict
+import asyncio
+import re
 
-import requests
-from bs4 import BeautifulSoup
-from requests import RequestException
+from tg_bot.services.days_operations import days_week
+from tg_bot.services.pdf_handler import get_text_from_pdf
 
 
-def get_day_text_page(day: str):
-    cookies = {
-        'PHPSESSID': 'B0BW4VY6f0fsfN4IKQ02jDntpoYrfsYD',
-    }
+async def extract_category_slices(text, categories):
+    """
+    Извлекает срезы текста для каждой категории.
 
-    headers = {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-        'cache-control': 'max-age=0',
-        # 'cookie': 'PHPSESSID=B0BW4VY6f0fsfN4IKQ02jDntpoYrfsYD',
-        'priority': 'u=0, i',
-        'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'none',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-    }
+    Аргументы:
+        text (str): исходный текст.
+        categories (list): список категорий.
 
-    params = {
-        'day': day,
-    }
+    Возвращает:
+        dict: словарь, где ключ — название категории, а значение — соответствующий текст.
+    """
+    category_slices = {}
 
-    try:
-        response = requests.get('https://domstolovaya.ru/menu/', params=params, cookies=cookies, headers=headers)
-        if response:
-            return response.text
-    except RequestException as e:
-        print(f"Ошибка при выполнении запроса: {e}")
+    for i, category in enumerate(categories):
+        start = text.find(category)
+        if start == -1:
+            continue  # Пропускаем категорию, если её не нашли
+        end = text.find(categories[i + 1], start) if i + 1 < len(categories) else len(text)
+        category_slices[category] = text[start:end].strip()
+
+    return category_slices
+
+
+async def extract_categories(text):
+    """
+    Извлекает категории из текста.
+
+    Аргументы:
+        text (str): исходный текст.
+
+    Возвращает:
+        list: список категорий.
+    """
+    # Шаблон для поиска категорий
+    pattern = r'(.*?)\n\s*Выход\s*\n\s*Цена\s*\n'
+
+    # Ищем все совпадения и извлекаем категории
+    categories = re.findall(pattern, text)
+
+    # Убираем лишние пробелы и возвращаем список
+    return [category.strip() for category in categories]
+
+
+async def extract_dishes(text):
+    """
+    Извлекает блюда из текста.
+
+    Аргументы:
+        text (str): исходный текст.
+
+    Возвращает:
+        list: список словарей с информацией о блюдах.
+    """
+    # Шаблон для поиска информации о блюдах
+    # pattern = r'(\d+)[\s\n](.*?)\n(\d+)\n(\d+)(?:\n|$)'
+    pattern = r'(\d+)[\s\n](.*?)\n(\d+(?:/\d+)?)\n(\d+)(?:\n|$)'
+
+    # Ищем все совпадения
+    matches = re.findall(pattern, text)
+
+    # Преобразуем данные в список словарей
+    dishes = [
+        {"name": match[1].strip(), "weight": match[2], "price": int(match[3])}
+        for match in matches
+    ]
+
+    return dishes
+
+
+async def get_dict_with_week_category_dishes(all_text: str) -> dict:
+    # Поиск начальных индексов для каждого дня недели
+    day_starts = {day: all_text.find(days_week[day].upper()) for day in days_week}
+
+    # Сортируем дни недели по порядку
+    sorted_days = sorted(day_starts.keys())
+
+    # Создаем срезы текста для каждого дня недели
+    day_texts = {}
+    for i, day in enumerate(sorted_days):
+        start = day_starts[day]
+        end = day_starts[sorted_days[i + 1]] if i + 1 < len(sorted_days) else len(all_text)
+        day_texts[days_week[day]] = all_text[start:end].strip()
+
+    # Обработка каждого дня недели
+    all_dishes = {}
+    for day, day_text in day_texts.items():
+        categories = await extract_categories(day_text)
+        category_slices = await extract_category_slices(day_text, categories)
+        day_dishes = {category: await extract_dishes(dishes_text) for category, dishes_text in category_slices.items()}
+        all_dishes[day] = day_dishes
+
+    return all_dishes
+
+
+async def get_dict_all_dishes(path_pdf_file: str) -> dict | bool:
+    template = {'Понедельник': {}, 'Вторник': {}, 'Среда': {}, 'Четверг': {}, 'Пятница': {}, 'Суббота': {},
+                'Воскресенье': {}}
+    text = await get_text_from_pdf(path_pdf_file)
+    dict_dishes = await get_dict_with_week_category_dishes(text)
+    if dict_dishes != template:
+        return dict_dishes
     return False
 
 
-def parse_page(html) -> Dict:
-    soup = BeautifulSoup(html, 'html.parser')
-    menu = {}
+async def test_pdf_get_text():
+    pdf_file = "C:\\Users\\Grob\\Documents\\МЕНЮ ДЛЯ КЛИЕНТОВ ИЮНЬ-ИЮЛЬ 24 г..pdf"
+    text = await get_text_from_pdf(pdf_file)
+    dict_dishes = await get_dict_with_week_category_dishes(text)
+    print(dict_dishes)
 
-    # Проходим по всем категориям
-    categories = soup.find_all('div', class_='assortment__title dishes')
-    for category in categories:
-        category_name = category.text.strip()  # Название категории
-        menu[category_name] = {}  # Добавляем категорию в словарь
 
-        # Получаем товары для данной категории
-        section_id = category.get('data-section')
-        items = soup.find_all('div', class_='assortment__item', attrs={'data-section': section_id})
+async def test_day(day: str) -> dict:
+    pdf_file = "C:\\Users\\Grob\\Documents\\МЕНЮ ПОСТНОЕ 2025 Г..pdf"
+    all_text: str = await get_text_from_pdf(pdf_file)
+    """
+    Извлекает информацию о блюдах для указанного дня недели.
 
-        for item in items:
-            # Название товара
-            item_name = item.find('div', class_='assortment__item-title--name').text.strip() if item.find('div', class_='assortment__item-title--name') else ''
-            if item_name is False:
-                continue
-            # Вес
-            weight = item.find('div', class_='assortment__item-title--weight').text.strip() if item.find('div', class_='assortment__item-title--weight') else ''
-            # try:
-            #     if '/' in weight_text:
-            #         weight_parts = weight_text.replace('г.', '').strip().split('/')
-            #         weight = sum(float(part.strip()) for part in weight_parts) / len(weight_parts)
-            #     else:
-            #         weight = float(weight_text.replace('г.', '').strip())
-            # except ValueError:
-            #     weight = 0.0
+    Аргументы:
+        all_text (str): Исходный текст.
+        day (str): День недели, для которого нужно извлечь данные.
 
-            # Калории
-            calories_text = item.find('div', class_='assortment__item-title--calories').text.strip() if item.find('div', class_='assortment__item-title--calories') else ''
-            try:
-                calories = float(calories_text.replace('ккал', '').strip().replace(',', '.'))
-            except ValueError:
-                calories = 0.0
+    Возвращает:
+        dict: Словарь с категориями и блюдами для указанного дня.
+    """
+    days_week = {
+        "понедельник": "ПОНЕДЕЛЬНИК",
+        "вторник": "ВТОРНИК",
+        "среда": "СРЕДА",
+        "четверг": "ЧЕТВЕРГ",
+        "пятница": "ПЯТНИЦА",
+        "суббота": "СУББОТА",
+        "воскресенье": "ВОСКРЕСЕНЬЕ",
+    }
 
-            # Цена
-            price_text = item.find('div', class_='assortment__item-title--price').text.strip() if item.find('div', class_='assortment__item-title--price') else ''
-            try:
-                price = float(price_text.replace('р.', '').strip())
-            except ValueError:
-                price = 0.0
+    if day.lower() not in days_week:
+        raise ValueError("Некорректный день недели")
 
-            # Изображение
-            image = item.find('div', class_='assortment__item-title--name').get('data-image', '').strip() if item.find('div', class_='assortment__item-title--name') else ''
-            if image:
-                image = "https://domstolovaya.ru"+image
+    day_upper = days_week[day.lower()]
+    start = all_text.find(day_upper)
+    if start == -1:
+        raise ValueError(f"День '{day}' не найден в тексте")
 
-            # Состав
-            description = item.find('div', class_='assortment__item-title--name').get('data-text', '').strip() if item.find('div', class_='assortment__item-title--name') else ''
-            composition = BeautifulSoup(description, 'html.parser').text if description else ''
-            # if composition:
-            #     composition = composition.replace("Состав:\r\n", "").replace("Состав:\xa0", "").replace("Состав: ", "")
+    next_days = list(days_week.values())
+    next_index = next_days.index(day_upper) + 1
+    end = all_text.find(next_days[next_index], start) if next_index < len(next_days) else len(all_text)
 
-            # Добавляем товар в категорию
-            menu[category_name][item_name] = {
-                'compound': composition,
-                'weight': weight,
-                'calories': calories,
-                'price': price,
-                'image': image
-            }
+    day_text = all_text[start:end].strip()
+    categories = await extract_categories(day_text)
+    category_slices = await extract_category_slices(day_text, categories)
+    print(category_slices)
+    day_dishes = {category: await extract_dishes(dishes_text) for category, dishes_text in category_slices.items()}
 
-    return menu
+    return {day: day_dishes}
+
+
+async def test_extract_dishes():
+    text = ('Вторые блюда\nВыход \nЦена\n1\nКуриная котлета\n60\n40\n2\nКуриная котлета паровая\n70\n62\n3\n'
+            'Куриная грудка с помидорами\n70\n87\n4\nБедро кур. жареное\n130\n103\n5\n'
+            'Курица в соусе Том ям\n70/20\n105\n6\nКуриная грудка сувид\n50\n89\n7\nТефтели с тыквой\n70\n69\n8\n'
+            'Печень по-деревенски с луком\n45/15\n76\n9\nТефтели из горбуши в молочном соусе\n70/30\n82\n10 '
+            'Пикша в томатном соусе\n60/30\n92')
+    dishes = await extract_dishes(text)
+    print(dishes)
+    return dishes
 
 
 if __name__ == "__main__":
-    day = "Понедельник"
-    text = get_day_text_page(day)
-    # parse_page(text)
-    print(parse_page(text))
+    # print(asyncio.run(test_day("Понедельник")))
+    asyncio.run(test_extract_dishes())
