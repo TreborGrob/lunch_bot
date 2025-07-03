@@ -37,7 +37,7 @@ class OrderModel(Base):
 
 
 class Order:
-    _fields = ("id", "user_id", "dish_id", "amount", "status", "date")
+    _fields = ("id", "user_id", "amount", "status", "date")
 
     def __init__(self, session: AsyncSession):
         self.session = session
