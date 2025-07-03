@@ -11,13 +11,12 @@ from tg_bot.essence.base_model import Base
 
 @dataclass
 class OrderData:
-    dish_id: Optional[int] = None
     id: int
     user_id: int
-    dish_id: int
     amount: int
     status: str
     date: str
+    dish_id: Optional[int] = None
 
 
 class OrderModel(Base):
