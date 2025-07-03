@@ -109,8 +109,9 @@ class ItemsOrder:
         Возвращает общее количество порций в заказе
         """
         result = await self.session.execute(
-            select(func.coalesce(func.sum(DishModel.amount * ItemsOrderModel.count), 0)
-                   .join(ItemsOrderModel, DishModel.id == ItemsOrderModel.dish_id)
-                   .where(ItemsOrderModel.order_id == order_id)
-                   ))
+            select(func.coalesce(func.sum(DishModel.amount * ItemsOrderModel.count), 0))
+            .select_from(ItemsOrderModel)
+            .join(DishModel, DishModel.id == ItemsOrderModel.dish_id)
+            .where(ItemsOrderModel.order_id == order_id)
+        )
         return result.scalar_one()
