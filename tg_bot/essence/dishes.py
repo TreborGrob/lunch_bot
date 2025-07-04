@@ -13,7 +13,7 @@ class DishModel(Base):
     __tablename__ = 'dishes'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    name = Column(String(40), unique=True)
+    name = Column(String(255), unique=True)
     weight = Column(String(20))
     amount = Column(Integer, nullable=False)
     compound = Column(Text)
@@ -46,9 +46,11 @@ class Dish:
         async with self.session.begin():
             await self.session.run_sync(Base.metadata.create_all)
 
-    def _to_dish_data(self, dish: DishModel) -> Optional[DishData]:
-        """Конвертирует SQLAlchemy модель в DishData"""
-        return DishData(**{f: getattr(dish, f) for f in self._fields}) if dish else None
+    @staticmethod
+    def to_dish_data(dish: DishModel) -> Optional[DishData]:
+        if not dish:
+            return None
+        return DishData(**{f: getattr(dish, f) for f in Dish._fields})
 
     async def _execute_query(self, query, is_many: bool = False):
         """Выполняет запрос и возвращает результат"""
@@ -80,12 +82,12 @@ class Dish:
     async def get_dish_by_id(self, dish_id: int) -> Optional[DishData]:
         """Получает блюдо по ID"""
         dish = await self._execute_query(select(DishModel).where(DishModel.id == dish_id))
-        return self._to_dish_data(dish)
+        return self.to_dish_data(dish)
 
     async def get_dish_by_name(self, name: str) -> Optional[DishData]:
         """Получает блюдо по названию"""
         dish = await self._execute_query(select(DishModel).where(DishModel.name == name))
-        return self._to_dish_data(dish)
+        return self.to_dish_data(dish)
 
     async def get_dishes_by_condition(self, *conditions) -> List[DishData]:
         """Универсальный метод для получения списка блюд по условиям"""
@@ -93,7 +95,7 @@ class Dish:
             select(DishModel).where(*conditions),
             is_many=True
         )
-        return [self._to_dish_data(d) for d in dishes]
+        return [self.to_dish_data(d) for d in dishes]
 
     async def get_dish_by_group_id(self, group_id: int) -> List[DishData]:
         """Получает все блюда по group_id"""

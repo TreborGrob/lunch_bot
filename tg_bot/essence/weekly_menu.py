@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, ForeignKey, select, delete, BigInteger
+from sqlalchemy import Column, String, ForeignKey, select, delete, BigInteger, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
-from tg_bot.essence.dishes import DishData, DishModel
+from tg_bot.essence.dishes import DishData, DishModel, Dish
 from tg_bot.essence.base_model import Base
 
 
@@ -71,29 +71,29 @@ class WeeklyMenu:
         result = await self.session.execute(
             select(DishModel)
             .join(WeeklyMenuModel, DishModel.id == WeeklyMenuModel.dish_id)
-            .where(WeeklyMenuModel.day_id == day_id)
+            .where(WeeklyMenuModel.day_id == literal(day_id))
         )
         dishes = result.scalars().all()
-        return [DishData(*dish.__dict__.values()) for dish in dishes]
+        return [Dish.to_dish_data(dish) for dish in dishes]
 
     async def get_dishes_for_day_by_group(self, day_id: int, group_id: int) -> list[DishData]:
         """Получает блюда для дня недели по group_id"""
         result = await self.session.execute(
             select(DishModel)
             .join(WeeklyMenuModel, DishModel.id == WeeklyMenuModel.dish_id)
-            .where(WeeklyMenuModel.day_id == day_id)
-            .where(DishModel.group_id == group_id)
+            .where(WeeklyMenuModel.day_id == literal(day_id))
+            .where(DishModel.group_id == literal(group_id))
         )
         dishes = result.scalars().all()
-        return [DishData(*dish.__dict__.values()) for dish in dishes]
+        return [Dish.to_dish_data(dish) for dish in dishes]
 
     async def remove_dish_from_day(self, day_id: int, dish_id: int):
         """Удаляет блюдо из дня недели"""
         try:
             await self.session.execute(
                 delete(WeeklyMenuModel)
-                .where(WeeklyMenuModel.day_id == day_id)
-                .where(WeeklyMenuModel.dish_id == dish_id)
+                .where(WeeklyMenuModel.day_id == literal(day_id))
+                .where(WeeklyMenuModel.dish_id == literal(dish_id))
             )
             await self.session.commit()
         except Exception as e:

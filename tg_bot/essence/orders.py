@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date
+from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import relationship
@@ -55,7 +55,7 @@ class Order:
 
     async def create_order(self, user_id: int, date: str) -> Optional[int]:
         """
-        Создает новый заказ или возвращает существующий
+        Создает новый заказ или возвращает существующий.
         Возвращает ID заказа или None в случае ошибки
         """
         try:
@@ -72,8 +72,8 @@ class Order:
             # Получаем ID заказа
             result = await self.session.execute(
                 select(OrderModel.id)
-                .where(OrderModel.user_id == user_id)
-                .where(OrderModel.date == date)
+                .where(OrderModel.user_id == literal(user_id))
+                .where(OrderModel.date == literal(date))
             )
             order = result.scalar_one_or_none()
             return order
@@ -97,7 +97,7 @@ class Order:
     async def get_order_by_id(self, order_id: int) -> Optional[OrderData]:
         """Получает заказ по ID"""
         result = await self.session.execute(
-            select(OrderModel).where(OrderModel.id == order_id)
+            select(OrderModel).where(OrderModel.id == literal(order_id))
         )
         return self._to_order_data(result.scalar_one_or_none())
 
@@ -105,9 +105,9 @@ class Order:
                                                status: str = StatusOrder.CREATE.value) -> Optional[int]:
         result = await self.session.execute(
             select(OrderModel.id)
-            .where(OrderModel.user_id == user_id,
-                   OrderModel.date == date,
-                   OrderModel.status == status)
+            .where(OrderModel.user_id == literal(user_id),
+                   OrderModel.date == literal(date),
+                   OrderModel.status == literal(status))
         )
         return result.scalar_one_or_none()
 
@@ -116,9 +116,9 @@ class Order:
         """Получает заказ по user_id, дате и статусу"""
         result = await self.session.execute(
             select(OrderModel)
-            .where(OrderModel.user_id == user_id)
-            .where(OrderModel.date == date)
-            .where(OrderModel.status == status)
+            .where(OrderModel.user_id == literal(user_id))
+            .where(OrderModel.date == literal(date))
+            .where(OrderModel.status == literal(status))
         )
         order = result.scalar_one_or_none()
         return OrderData(**{f: getattr(order, f) for f in self._fields}) if order else None
@@ -127,8 +127,8 @@ class Order:
         """Получает заказ по user_id и дате"""
         result = await self.session.execute(
             select(OrderModel)
-            .where(OrderModel.user_id == user_id)
-            .where(OrderModel.date == date)
+            .where(OrderModel.user_id == literal(user_id))
+            .where(OrderModel.date == literal(date))
         )
         order = result.scalar_one_or_none()
         return OrderData(**{f: getattr(order, f) for f in self._fields}) if order else None
@@ -150,8 +150,8 @@ class Order:
         try:
             await self.session.execute(
                 update(OrderModel)
-                .where(OrderModel.user_id == user_id)
-                .where(OrderModel.date == date)
+                .where(OrderModel.user_id == literal(user_id))
+                .where(OrderModel.date == literal(date))
                 .values(**kwargs)
             )
             await self.session.commit()
@@ -163,7 +163,7 @@ class Order:
         """Удаляет заказ по ID"""
         try:
             await self.session.execute(
-                delete(OrderModel).where(OrderModel.id == order_id)
+                delete(OrderModel).where(OrderModel.id == literal(order_id))
             )
             await self.session.commit()
         except Exception as e:
@@ -175,7 +175,7 @@ class Order:
         try:
             await self.session.execute(
                 update(OrderModel)
-                .where(OrderModel.date == date)
+                .where(OrderModel.date == literal(date))
                 .values(status=StatusOrder.CLOSE.value)
             )
             await self.session.commit()

@@ -102,7 +102,7 @@ async def get_dict_with_week_category_dishes(all_text: str) -> dict:
 async def get_dict_all_dishes(path_pdf_file: str) -> dict | bool:
     template = {'Понедельник': {}, 'Вторник': {}, 'Среда': {}, 'Четверг': {}, 'Пятница': {}, 'Суббота': {},
                 'Воскресенье': {}}
-    text = await get_text_from_pdf(path_pdf_file)
+    text = get_text_from_pdf(path_pdf_file)
     dict_dishes = await get_dict_with_week_category_dishes(text)
     if dict_dishes != template:
         return dict_dishes
@@ -111,14 +111,14 @@ async def get_dict_all_dishes(path_pdf_file: str) -> dict | bool:
 
 async def test_pdf_get_text():
     pdf_file = "C:\\Users\\Grob\\Documents\\МЕНЮ ДЛЯ КЛИЕНТОВ ИЮНЬ-ИЮЛЬ 24 г..pdf"
-    text = await get_text_from_pdf(pdf_file)
+    text = get_text_from_pdf(pdf_file)
     dict_dishes = await get_dict_with_week_category_dishes(text)
     print(dict_dishes)
 
 
 async def test_day(day: str) -> dict:
     pdf_file = "C:\\Users\\Grob\\Documents\\МЕНЮ ПОСТНОЕ 2025 Г..pdf"
-    all_text: str = await get_text_from_pdf(pdf_file)
+    all_text: str = get_text_from_pdf(pdf_file)
     """
     Извлекает информацию о блюдах для указанного дня недели.
 

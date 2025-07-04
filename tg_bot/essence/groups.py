@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import select, delete, BigInteger, func
+from sqlalchemy import select, delete, BigInteger, func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String
 from sqlalchemy.dialects.mysql import insert
@@ -48,7 +48,7 @@ class Group:
 
             # Получаем ID группы
             result = await self.session.execute(
-                select(GroupModel.id).where(GroupModel.name == name)
+                select(GroupModel.id).where(GroupModel.name == literal(name))
             )
             group = result.scalar_one_or_none()
             return group
@@ -65,8 +65,8 @@ class Group:
         try:
             result = await self.session.execute(
                 select(GroupModel)
-                .where(func.lower(GroupModel.name) == func.lower(group_name))
-            )
+                .where(func.lower(GroupModel.name) == literal(func.lower(group_name))
+                       ))
             return result.scalar_one_or_none()
         except Exception as e:
             print(f"Error getting group by name: {e}")

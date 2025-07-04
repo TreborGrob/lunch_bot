@@ -1,13 +1,13 @@
 import asyncio
-
+from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from config import MANAGER, ADMIN
-from tg_bot.essence.dishes import Dish
-from tg_bot.essence.groups import Group
-from tg_bot.essence.items_in_order import ItemsOrder
-from tg_bot.essence.orders import Order
+from tg_bot.essence.dishes import DishModel
+from tg_bot.essence.groups import GroupModel
+from tg_bot.essence.items_in_order import ItemsOrderModel
+from tg_bot.essence.orders import Order, OrderModel
 from tg_bot.essence.users import User
-from tg_bot.essence.weekly_menu import WeeklyMenu
+from tg_bot.essence.weekly_menu import WeeklyMenuModel
 from tg_bot.services.create_text_total_lunch_order import lunch_picker
 from tg_bot.services.days_operations import days_week, next_work_day_string
 from tg_bot.services.parse_menu import get_dict_all_dishes
@@ -15,42 +15,75 @@ from tg_bot.services.send_message_bot import send_message_bot
 from tg_bot.services.statuses import StatusOrder
 
 
-async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str):
-    # Получаем словарь всех блюд
+async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str) -> bool:
     dishes_dict = await get_dict_all_dishes(path_pdf_file)
-    if dishes_dict:
-        dishes_table = Dish(session)
-        group_table = Group(session)
-        weekly_menu_table = WeeklyMenu(session)
-        items_order_table = ItemsOrder(session)
-        orders_table = Order(session)
 
-        # Очищаем существующее меню
-        await dishes_table.delete_dishes()
-        await group_table.delete_groups()
-        await weekly_menu_table.remove_menu()
-        await items_order_table.delete_all_items_in_all_orders()
-        await orders_table.delete_all_orders()
-
-        # Парсим меню для каждого дня недели
-        for day, categories in dishes_dict.items():
-            # Находим номер дня
-            day_number = next(key for key, value in days_week.items() if value == day)
-            for category, dishes in categories.items():
-                # Создаем группу (категорию)
-                group_id = await group_table.create_group(category)
-                for dish in dishes:
-                    # Извлекаем данные блюда
-                    dish_name = dish['name']
-                    weight = dish['weight']
-                    price = dish['price']
-                    # Создаем блюдо и добавляем его в меню
-                    id_dish = await dishes_table.create_dish(name=dish_name, weight=weight, amount=price,
-                                                             group_id=group_id)
-                    await weekly_menu_table.add_dish_to_day(day_number + 1, id_dish)
-        return True
-    else:
+    if not dishes_dict:
         return False
+
+    # Удаляем старые данные
+    await session.execute(delete(ItemsOrderModel))
+    await session.execute(delete(OrderModel))
+    await session.execute(delete(WeeklyMenuModel))
+    await session.execute(delete(DishModel))
+    await session.execute(delete(GroupModel))
+    await session.commit()
+
+    # Вставляем группы
+    group_names = list({cat for categories in dishes_dict.values() for cat in categories})
+    group_list = [{"name": name} for name in group_names]
+
+    await session.execute(insert(GroupModel), group_list)
+    await session.commit()
+
+    # Получаем id-шники групп
+    result = await session.execute(select(GroupModel))
+    groups = result.scalars().all()
+    group_map = {g.name: g.id for g in groups}
+
+    # Подготовка блюд
+    dish_list = []
+    seen_dish_names = set()
+    for day, categories in dishes_dict.items():
+        for category, dishes in categories.items():
+            for dish in dishes:
+                dish_name = dish["name"]
+                if dish_name in seen_dish_names:
+                    continue  # пропускаем дубликаты
+                seen_dish_names.add(dish_name)
+                dish_list.append({
+                    "name": dish["name"],
+                    "weight": dish["weight"],
+                    "amount": dish["price"],
+                    "group_id": group_map[category]
+                })
+
+    await session.execute(insert(DishModel), dish_list)
+    await session.commit()
+
+    # Получаем id-шники блюд
+    result = await session.execute(select(DishModel))
+    dishes = result.scalars().all()
+    dish_map = {(d.name, d.group_id): d.id for d in dishes}
+    # Подготовка меню
+    menu_list = []
+    for day, categories in dishes_dict.items():
+        day_number = next(k for k, v in days_week.items() if v == day)
+        for category, dishes in categories.items():
+            group_id = group_map[category]
+            for dish in dishes:
+                dish_name = dish["name"]
+                dish_id = dish_map.get((dish_name, group_id))
+                if dish_id:
+                    menu_list.append({
+                        "day_id": day_number + 1,
+                        "dish_id": dish_id
+                    })
+
+    await session.execute(insert(WeeklyMenuModel), menu_list)
+    await session.commit()
+
+    return True
 
 
 async def reminder(session: AsyncSession):

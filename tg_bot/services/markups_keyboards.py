@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
@@ -72,8 +73,10 @@ async def items_group_markup(group_id: int, session: AsyncSession, user_id: int)
 
     current_datetime = datetime.now()
     day_id = current_datetime.weekday() + 2
+    # print(day_id)
+    # print(group_id)
     dishes = await weekly_menu_table.get_dishes_for_day_by_group(day_id, group_id)
-
+    # print(dishes)
     for dish in dishes:
         builder.row(
             InlineKeyboardButton(text=dish.name, callback_data=f'item_{dish.id}'),
