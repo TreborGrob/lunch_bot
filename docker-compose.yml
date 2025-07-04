@@ -38,7 +38,8 @@ services:
       - "8080:80"
     environment:
       PMA_HOST: mysql
-      PMA_USER: ${USER_DB}
-      PMA_PASSWORD: ${PASSWORD_DB}
+      # PMA_USER: ${USER_DB}
+      # PMA_PASSWORD: ${PASSWORD_DB}
+      PMA_ARBITRARY: 0
     depends_on:
       - mysql
