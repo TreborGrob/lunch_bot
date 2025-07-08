@@ -1,6 +1,7 @@
+from asyncio.log import logger
 from dataclasses import dataclass
 from typing import List, Optional
-from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date, literal
+from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date, literal, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import relationship
@@ -29,11 +30,10 @@ class OrderModel(Base):
     status = Column(String(20), default=StatusOrder.CREATE.value)
     date = Column(Date, nullable=False)  # Можно использовать Date для дат
     item_associations = relationship("ItemsOrderModel", back_populates="order")
-
-    __table_args__ = {
-        'mysql_engine': 'InnoDB',
-        'mysql_charset': 'utf8mb4'
-    }
+    __table_args__ = (
+        UniqueConstraint('user_id', 'date', name='uq_user_date'),
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'}
+    )
 
 
 class Order:
@@ -53,33 +53,34 @@ class Order:
             return None
         return OrderData(**{f: getattr(order, f) for f in self._fields})
 
-    async def create_order(self, user_id: int, date: str) -> Optional[int]:
+    async def create_order(self, user_id: int, date: str) -> int | Column[int] | None:
         """
-        Создает новый заказ или возвращает существующий.
-        Возвращает ID заказа или None в случае ошибки
+        Создает новый заказ, если его еще нет для данного пользователя и даты.
+        Возвращает ID заказа или None в случае ошибки.
         """
         try:
-            # Используем INSERT ... ON DUPLICATE KEY для MySQL
-            stmt = (
-                insert(OrderModel)
-                .values(user_id=user_id, date=date)
-                .on_duplicate_key_update(user_id=user_id)
-            )
-
-            await self.session.execute(stmt)
-            await self.session.commit()
-
-            # Получаем ID заказа
-            result = await self.session.execute(
+            # Сначала проверяем существующий заказ
+            existing_order = await self.session.execute(
                 select(OrderModel.id)
                 .where(OrderModel.user_id == literal(user_id))
                 .where(OrderModel.date == literal(date))
             )
-            order = result.scalar_one_or_none()
-            return order
+            order = existing_order.scalar_one_or_none()
+
+            if order:
+                return order  # Возвращаем ID существующего заказа
+
+            # Создаем новый заказ
+            new_order = OrderModel(user_id=user_id, date=date)
+            self.session.add(new_order)
+            await self.session.commit()
+            await self.session.refresh(new_order)
+
+            return new_order.id
+
         except Exception as e:
             await self.session.rollback()
-            print(f"Error creating order: {e}")
+            logger.error(f"Error creating order for user {user_id} on {date}: {e}")
             return None
 
     async def _get_order_by_conditions(self, *conditions) -> Optional[OrderData]:

@@ -1,6 +1,7 @@
 import logging
 
-from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger, literal
+from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger, literal, exists, \
+    UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import insert
@@ -18,6 +19,9 @@ class ItemsOrderModel(Base):
     count = Column(Integer, default=0)
     dish = relationship("DishModel", back_populates="order_associations")
     order = relationship("OrderModel", back_populates="item_associations")
+    __table_args__ = (
+        UniqueConstraint('order_id', 'dish_id', name='uq_order_dish'),
+    )
 
 
 class ItemsOrder:
@@ -29,21 +33,36 @@ class ItemsOrder:
         async with self.session.begin():
             await self.session.run_sync(Base.metadata.create_all)
 
-    async def add_dish_to_order(self, order_id: int, dish_id: int, count: int = 1):
+    async def add_dish_to_order(self, order_id: int, dish_id: int, count: int = 1) -> bool:
         """
-        Добавляет блюдо в заказ или увеличивает количество, если уже есть
+        Добавляет блюдо в заказ или обновляет количество.
+        Возвращает True при успехе, False при ошибке.
         """
         try:
+            # Проверяем существование блюда
+            dish_exists = await self.session.execute(
+                select(exists().where(DishModel.id == dish_id)))
+            if not dish_exists.scalar():
+                logging.error(f"Dish {dish_id} does not exist")
+                return False
+
+            # Добавляем или обновляем блюдо в заказе
             stmt = (
                 insert(ItemsOrderModel)
                 .values(order_id=order_id, dish_id=dish_id, count=count)
-                .on_duplicate_key_update(count=ItemsOrderModel.count + count)
+                .on_duplicate_key_update(
+                    count=ItemsOrderModel.count + count
+                )
             )
+
             await self.session.execute(stmt)
             await self.session.commit()
+            return True
+
         except Exception as e:
             await self.session.rollback()
-            logging.error(f"Error adding dish to order: {e}")
+            logging.error(f"Error adding dish {dish_id} to order {order_id}: {e}")
+            return False
 
     async def get_dishes_for_order(self, order_id: int) -> list[dict]:
         """

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tg_bot.essence.base_model import Base
-from config import TOKEN, DATABASE_URL
+from config import TOKEN, DATABASE_URL, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.DatabaseMiddleware import register_global_middlewares
 from tg_bot.handler import commands, handlers
@@ -46,15 +46,15 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             func=reminder,
             trigger='cron',
             day='*',
-            hour='12',
-            minute='30',
+            hour=f'{REMINDER_HOUR}',
+            minute=f'{REMINDER_MINUTES}',
             kwargs={'session': session}
         )
         scheduler.add_job(
             func=total_text_lunch_send_admin,
             trigger='cron',
             day='*',
-            hour='14',
+            hour=f'{LAST_HOUR_FOR_ORDER}',
             minute='00',
             kwargs={'session': session}
         )

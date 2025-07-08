@@ -19,6 +19,10 @@ PASSWORD_DB = os.getenv("PASSWORD_DB")
 HOST_DB = os.getenv("HOST_DB")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 DATABASE_URL = f"mysql+asyncmy://{USER_DB}:{PASSWORD_DB}@{HOST_DB}:{PORT_DB}/{DATABASE_NAME}"
+LAST_HOUR_FOR_ORDER: int = 16
+HOUR_OPEN_ORDER: int = 1
+REMINDER_HOUR: int = 12
+REMINDER_MINUTES: int = 30
 
 if __name__ == '__main__':
     print('ADMIN: ', ADMIN)
