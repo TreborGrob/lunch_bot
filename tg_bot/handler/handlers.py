@@ -285,7 +285,7 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
         dishes = await items_order_table.get_dishes_for_order(order.id)
         text_user = f"Твой заказ на {date}:\n"
         if dishes:
-            dish_counter = await dishes_in_side_items(dishes)
+            dish_counter = await dishes_in_side_items(dishes, session)
             for dish, count in dish_counter.items():
                 user_dish_counter[dish] += count
             for dish, count in user_dish_counter.items():
