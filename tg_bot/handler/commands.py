@@ -247,12 +247,12 @@ async def set_status(message: Message, command: CommandObject, session: AsyncSes
 async def lunch_picker_command(message: Message, session: AsyncSession, role: str):
     if role not in ("admin", "manager"):
         return await message.answer(Messages.NO_ACCESS)
-    # try:
-    text = await lunch_picker(session)
-    await message.answer(text, parse_mode="HTML")
-    # except Exception as e:
-    #     logging.error(e)
-    #     await message.answer("Произошла ошибка при формировании заказов")
+    try:
+        text = await lunch_picker(session)
+        await message.answer(text, parse_mode="HTML")
+    except Exception as e:
+        logging.error(e)
+        await message.answer("Произошла ошибка при формировании заказов")
 
 
 @router.message(Command("get_users"))

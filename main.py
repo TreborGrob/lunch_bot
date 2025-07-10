@@ -107,7 +107,7 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        # setup_logging()
+        setup_logging()
         if platform.system() == 'Windows':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())
