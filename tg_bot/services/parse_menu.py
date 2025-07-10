@@ -5,19 +5,9 @@ from tg_bot.services.pdf_handler import get_text_from_pdf
 
 
 async def extract_category_slices(text, categories):
-    """
-    Извлекает срезы текста для каждой категории.
-
-    Аргументы:
-        text (str): исходный текст.
-        categories (list): список категорий.
-
-    Возвращает:
-        dict: словарь, где ключ — название категории, а значение — соответствующий текст.
-    """
     category_slices = {}
     category_positions = []
-
+    tmp_cat = ""
     # Находим все позиции категорий в тексте
     for category in categories:
         pos = text.find(category)
@@ -33,7 +23,18 @@ async def extract_category_slices(text, categories):
         # Ищем начало следующей категории (если есть)
         end = category_positions_sorted[i + 1][0] if i + 1 < len(category_positions_sorted) else len(text)
         category_slices[category] = text[start:end].strip()
+        test_text = text[start:end].strip()
+        result = test_text.split("\n1\n")
+        category_slices[category] = result[1]
+        if len(result) > 2:
+            tmp_cat = result[2]
 
+    # Определяем отсутствующие категории
+    found_categories = set(category_slices.keys())
+    all_categories = set(categories)
+    missing_categories = list(all_categories - found_categories)
+    if missing_categories and len(missing_categories) < 2:
+        category_slices[missing_categories[0]] = tmp_cat
     return category_slices
 
 
@@ -59,27 +60,39 @@ async def extract_categories(text: str) -> list[str]:
 
 
 async def extract_dishes(text):
-    """
-    Извлекает блюда из текста.
+    lines = [line.strip() for line in text.strip().split('\n') if line.strip()]
+    dishes = []
 
-    Аргументы:
-        text (str): исходный текст.
+    i = 0
+    while i < len(lines) - 2:
+        name = lines[i]
 
-    Возвращает:
-        list: список словарей с информацией о блюдах.
-    """
-    # Шаблон для поиска информации о блюдах
-    # pattern = r'(\d+)[\s\n](.*?)\n(\d+)\n(\d+)(?:\n|$)'
-    pattern = r'(\d+)[\s\n](.*?)\n(\d+(?:/\d+)?)\n(\d+)(?:\n|$)'
+        # Завершаем, если строка — это явно не название блюда
+        if re.search(r'меню|период|действия|не является', name.lower()):
+            break
 
-    # Ищем все совпадения
-    matches = re.findall(pattern, text)
+        # Обработка случая "12 Корн-дог"
+        if re.match(r'^\d+\s+\S+', name):
+            name = re.sub(r'^\d+\s+', '', name)
 
-    # Преобразуем данные в список словарей
-    dishes = [
-        {"name": match[1].strip(), "weight": match[2], "price": int(match[3])}
-        for match in matches
-    ]
+        weight = lines[i+1]
+        price = lines[i+2]
+
+        # Проверяем, что вес и цена — числа (или число/число)
+        if not re.match(r'^\d+(?:/\d+)?$', weight) or not price.isdigit():
+            break
+
+        # Пропускаем номер строки, если есть
+        if i + 3 < len(lines) and re.fullmatch(r'\d+', lines[i+3]):
+            i += 4
+        else:
+            i += 3
+
+        dishes.append({
+            "name": name,
+            "weight": weight,
+            "price": int(price)
+        })
 
     return dishes
 

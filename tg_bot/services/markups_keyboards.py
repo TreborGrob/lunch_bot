@@ -10,17 +10,8 @@ from tg_bot.essence.items_in_order import ItemsOrder
 from tg_bot.essence.orders import Order
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.services.days_operations import next_work_day_string
+from tg_bot.services.resources import Buttons
 from tg_bot.services.statuses import StatusOrder
-
-
-def menu_markup(tg_id: int) -> InlineKeyboardMarkup:
-    """Главное меню"""
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(text="📝 Меню на след.рабочий день", callback_data='menu_tomorrow'),
-        InlineKeyboardButton(text=f'Заказ ({currency})', callback_data=f'cart_{tg_id}')
-    )
-    return builder.as_markup()
 
 
 async def groups_markup(session: AsyncSession, user_id: int) -> InlineKeyboardMarkup:
@@ -41,7 +32,7 @@ async def groups_markup(session: AsyncSession, user_id: int) -> InlineKeyboardMa
         if order and order.amount:
             builder.row(
                 InlineKeyboardButton(
-                    text=f"Заказ ({order.amount} {currency}) 🛒",
+                    text=Buttons.ORDER_TEXT.format(amount=order.amount, currency=currency),
                     callback_data=f'cart_{user_id}'
                 )
             )
@@ -81,17 +72,17 @@ async def items_group_markup(group_id: int, session: AsyncSession, user_id: int)
         )
 
         if order and order.status == StatusOrder.CREATE.value:
-            builder.add(InlineKeyboardButton(text="✅", callback_data=f'add_cart_{dish.id}'))
+            builder.add(InlineKeyboardButton(text=Buttons.TICK, callback_data=f'add_cart_{dish.id}'))
 
         if dish.id in items_in_order:
-            builder.add(InlineKeyboardButton(text="❌", callback_data=f'del_cart_{dish.id}'))
+            builder.add(InlineKeyboardButton(text=Buttons.CROSS, callback_data=f'del_cart_{dish.id}'))
 
     order_amount = await items_order_table.get_amount_for_order(order_id) if order_id else 0
 
     builder.row(
-        InlineKeyboardButton(text="🔙Назад", callback_data=f"group_{group_id}"),
+        InlineKeyboardButton(text=Buttons.BACK, callback_data=f"group_{group_id}"),
         InlineKeyboardButton(
-            text=f"Заказ ({order_amount} {currency}) 🛒",
+            text=Buttons.ORDER_TEXT.format(amount=order_amount, currency=currency),
             callback_data=f'cart_{user_id}'
         )
     )
@@ -112,20 +103,20 @@ async def cart_items_markup(dishes: list) -> InlineKeyboardMarkup:
         builder.row(
             InlineKeyboardButton(text=name, callback_data=f'item_{id_item}'),
             InlineKeyboardButton(text=f"{count} ед. - {count * amount} {currency}", callback_data=f'item_{id_item}'),
-            InlineKeyboardButton(text="✅", callback_data=f'plus_cart_{id_item}'),
-            InlineKeyboardButton(text="❌", callback_data=f'minus_cart_{id_item}')
+            InlineKeyboardButton(text=Buttons.TICK, callback_data=f'plus_cart_{id_item}'),
+            InlineKeyboardButton(text=Buttons.CROSS, callback_data=f'minus_cart_{id_item}')
         )
 
     if dishes:
         builder.row(
             InlineKeyboardButton(
-                text="Заказать на след.рабочий день",
+                text=Buttons.ORDER_CONFIRM,
                 callback_data="confirm_order"
             )
         )
 
     builder.row(
-        InlineKeyboardButton(text="📝В меню", callback_data="menu_main")
+        InlineKeyboardButton(text=Buttons.IN_MENU, callback_data="menu_main")
     )
 
     return builder.as_markup()
@@ -151,17 +142,17 @@ async def back_menu_markup(item_id: int, group_id: int, session: AsyncSession, u
 
         if order and order.status == StatusOrder.CREATE.value:
             builder.row(
-                InlineKeyboardButton(text="✅", callback_data=f'add_cart_{item_id}')
+                InlineKeyboardButton(text=Buttons.TICK, callback_data=f'add_cart_{item_id}')
             )
 
         if item_id in items_in_order:
             builder.add(
-                InlineKeyboardButton(text="❌", callback_data=f'del_cart_{item_id}')
+                InlineKeyboardButton(text=Buttons.CROSS, callback_data=f'del_cart_{item_id}')
             )
 
     builder.row(
-        InlineKeyboardButton(text="🔙Назад", callback_data=f"group_{group_id}"),
-        InlineKeyboardButton(text="📝В меню", callback_data="menu_main")
+        InlineKeyboardButton(text=Buttons.BACK, callback_data=f"group_{group_id}"),
+        InlineKeyboardButton(text=Buttons.IN_MENU, callback_data="menu_main")
     )
 
     return builder.as_markup()
@@ -171,7 +162,7 @@ def request_contact() -> ReplyKeyboardMarkup:
     """Клавиатура запроса контакта"""
     builder = ReplyKeyboardBuilder()
     builder.row(
-        KeyboardButton(text="Отправить контакт", request_contact=True)
+        KeyboardButton(text=Buttons.SEND_CONTACT, request_contact=True)
     )
     return builder.as_markup(
         resize_keyboard=True,

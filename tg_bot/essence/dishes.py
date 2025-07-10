@@ -23,7 +23,7 @@ class DishModel(Base):
     order_associations = relationship("ItemsOrderModel", back_populates="dish")
 
 
-@dataclass
+@dataclass(frozen=True)
 class DishData:
     id: int
     name: str

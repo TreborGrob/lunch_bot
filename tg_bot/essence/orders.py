@@ -171,7 +171,7 @@ class Order:
             await self.session.rollback()
             print(f"Error deleting order: {e}")
 
-    async def update_orders_by_date(self, date: str):
+    async def close_orders_by_date(self, date: str):
         """Закрывает все заказы на указанную дату"""
         try:
             await self.session.execute(

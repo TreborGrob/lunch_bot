@@ -7,10 +7,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tg_bot.essence.base_model import Base
-from config import TOKEN, DATABASE_URL, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES
+from config import TOKEN, DATABASE_URL, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES, TIMEZONE, \
+    LAST_MINUTE_FOR_ORDER
 from tg_bot.essence.weekly_menu import WeeklyMenu
-from tg_bot.middlewares.DatabaseMiddleware import register_global_middlewares
+from tg_bot.middlewares.database import register_global_middlewares
 from tg_bot.handler import commands, handlers
+from tg_bot.middlewares.roles import RoleMiddleware
 from tg_bot.services.send_message_bot import send_report_admin
 from tg_bot.services.set_bot_commands import set_default_commands
 from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin
@@ -55,7 +57,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             trigger='cron',
             day='*',
             hour=f'{LAST_HOUR_FOR_ORDER}',
-            minute='00',
+            minute=f'{LAST_MINUTE_FOR_ORDER}',
             kwargs={'session': session}
         )
 
@@ -76,7 +78,7 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Настройка планировщика
-    scheduler = AsyncIOScheduler(timezone=timezone('Europe/Moscow'))
+    scheduler = AsyncIOScheduler(timezone=timezone(TIMEZONE))
     dp['scheduler'] = scheduler
     dp['session_pool'] = session_pool
 
@@ -88,7 +90,7 @@ async def main():
 
     # Регистрируем middleware
     register_global_middlewares(dp, session_pool)
-
+    dp.message.middleware(RoleMiddleware())
     # Запускаем бота
     await bot.delete_webhook(drop_pending_updates=True)
 
@@ -105,7 +107,7 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        setup_logging()
+        # setup_logging()
         if platform.system() == 'Windows':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())

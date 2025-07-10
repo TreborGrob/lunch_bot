@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from collections import defaultdict
@@ -18,6 +19,7 @@ from tg_bot.services.days_operations import next_work_day_string, create_matrice
     parse_calendar
 from tg_bot.services.handler_dishes import dishes_in_side_items
 from tg_bot.services.markups_keyboards import groups_markup, request_contact
+from tg_bot.services.resources import Messages
 from tg_bot.services.statuses import StatusOrder, StatusEmployee
 from tg_bot.services.timer_schedule import get_menu_by_kind, lunch_picker
 from tg_bot.services.work_with_log import tail
@@ -78,6 +80,7 @@ async def menu_command(message: Message, session: AsyncSession):
     user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
+    date_tomorrow = await next_work_day_string()
     if user_data:
         if user_data.status == StatusEmployee.WORK.value:
             date = await next_work_day_string()
@@ -86,7 +89,7 @@ async def menu_command(message: Message, session: AsyncSession):
                 order = await order_table.get_order_by_user_id_and_date(user_id, date)
                 if not order:
                     await order_table.create_order(user_id, date)
-                await message.answer("Выбери обед на следующий рабочий день",
+                await message.answer(f"Выбор обеда на {date_tomorrow}",
                                      reply_markup=await groups_markup(session, user_id))
             else:
                 await message.answer("Технические неполадки сообщите администратору бота.")
@@ -220,113 +223,122 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
 
 
 @router.message(Command("set_status"))
-async def set_status(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        user_table = User(session)
-        arguments = command.args
-        data = arguments.split(" ")
-        phone_num = int(data[0])
-        try:
-            if re.fullmatch(r"\d{10}", data[0]):
-                if data[1].lower() == "отдых" or "больничный":
-                    status = "relax"
-                else:
-                    status = "office"
-                await user_table.update_user(phone_num, status=status)
-                await message.answer(f"Статус {phone_num} обновлён на {data[1]}")
-        except Exception as e:
-            await message.answer(f"Ошибка обновления статуса: {e}")
+async def set_status(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+
+    user_table = User(session)
+    arguments = command.args
+    data = arguments.split(" ")
+    phone_num = int(data[0])
+    try:
+        if re.fullmatch(r"\d{10}", data[0]):
+            if data[1].lower() in ("отдых", "больничный", "отпуск"):
+                status = "relax"
+            else:
+                status = "office"
+            await user_table.update_user(phone_num, status=status)
+            await message.answer(f"Статус {phone_num} обновлён на {data[1]}")
+    except Exception as e:
+        await message.answer(f"Ошибка обновления статуса: {e}")
 
 
 @router.message(Command("lunch_picker"))
-async def lunch_picker_command(message: Message, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        try:
-            text = await lunch_picker(session)
-            await message.answer(text, parse_mode="HTML")
-        except Exception as e:
-            await message.answer("Произошла ошибка при формировании заказов")
+async def lunch_picker_command(message: Message, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    # try:
+    text = await lunch_picker(session)
+    await message.answer(text, parse_mode="HTML")
+    # except Exception as e:
+    #     logging.error(e)
+    #     await message.answer("Произошла ошибка при формировании заказов")
 
 
 @router.message(Command("get_users"))
-async def get_status_users(message: Message, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        text = ""
-        user_table = User(session)
-        users_data = await user_table.get_all_users()
-        for user in users_data:
-            text += f"{user.phone_number} - {user.username} - {user.status}\n"
-    else:
-        text = "Команда для администратора"
+async def get_status_users(message: Message, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    text = ""
+    user_table = User(session)
+    users_data = await user_table.get_all_users()
+    for user in users_data:
+        text += f"{user.phone_number} - {user.username} - {user.status}\n"
+
     await message.answer(text)
 
 
 @router.message(Command("read_log"))
-async def read_logfile(message: Message):
+async def read_logfile(message: Message, role: str):
+    if role not in "admin":
+        return await message.answer(Messages.NO_ACCESS)
     log_dir = "logs"
     log_file = os.path.join(log_dir, "bot.log")
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        file_size = os.path.getsize(log_file)
-        last_lines = await tail(log_file, 10)
-        await message.answer(f'Размер {log_file}: {round(file_size / 1024, 2)} килобайт\n'
-                             f'{last_lines}')
+    file_size = os.path.getsize(log_file)
+    last_lines = await tail(log_file, 10)
+    await message.answer(f'Размер {log_file}: {round(file_size / 1024, 2)} килобайт\n'
+                         f'{last_lines}')
 
 
 @router.message(Command("clear_next_day"))
-async def clear_next_day_orders(message: Message, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        next_work_day = await next_work_day_string()
-        order_table = Order(session)
-        await order_table.delete_orders_by_date(next_work_day)
-        await message.answer(f"Заказы на {next_work_day} очищены.")
+async def clear_next_day_orders(message: Message, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    next_work_day = await next_work_day_string()
+    order_table = Order(session)
+    await order_table.delete_orders_by_date(next_work_day)
+    await message.answer(f"Заказы на {next_work_day} очищены.")
 
 
 @router.message(Command("set_name"))
-async def set_name_user(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        user_table = User(session)
-        arguments = command.args
-        data = arguments.split(" ")
-        phone_num = int(data[0])
-        await user_table.update_user(phone_number=phone_num, username=data[-1])
-        await message.answer(f"Пользователю с номером {phone_num} присвоен username = {data[-1]}")
+async def set_name_user(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    user_table = User(session)
+    arguments = command.args
+    data = arguments.split(" ")
+    phone_num = int(data[0])
+    await user_table.update_user(phone_number=phone_num, username=data[-1])
+    await message.answer(f"Пользователю с номером {phone_num} присвоен username = {data[-1]}")
 
 
 @router.message(Command("update_price"))
-async def update_price_item(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        dishes_table = Dish(session)
-        arguments = command.args
-        data = arguments.split(" ")
-        amount = data[-1]
-        name_item = data[0]
-        if amount.isdigit():
-            try:
-                await dishes_table.update_dish(name=name_item, amount=int(amount))
-                await message.answer(f"У {name_item} цена обновлена на {int(amount)}.")
-            except Exception as e:
-                await message.answer(f"Ошибка: {e}")
-        else:
-            await message.answer("Некорректное исправление")
+async def update_price_item(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    dishes_table = Dish(session)
+    arguments = command.args
+    data = arguments.split(" ")
+    amount = data[-1]
+    name_item = data[0]
+    if amount.isdigit():
+        try:
+            await dishes_table.update_dish(name=name_item, amount=int(amount))
+            await message.answer(f"У {name_item} цена обновлена на {int(amount)}.")
+        except Exception as e:
+            await message.answer(f"Ошибка: {e}")
+    else:
+        await message.answer("Некорректное исправление")
 
 
 @router.message(F.document)
-async def any_msg(message: Message, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
-        pdf_name = "menu.pdf"
-        file_id = message.document.file_id
-        async with Bot(token=TOKEN).context(True) as bot:
-            file = await bot.get_file(file_id)
-            file_path = file.file_path
-            await bot.download_file(file_path, pdf_name)
-        update_result = await get_menu_by_kind(session, pdf_name)
-        if update_result:
-            result_text = "Меню обновилось"
-        else:
-            result_text = "Возникла ошибка, меню не обновилось, попробуй ещё раз."
-        if os.path.exists(pdf_name):
-            os.remove(pdf_name)
-        await message.answer(result_text)
+async def any_msg(message: Message, session: AsyncSession, role: str):
+    if role not in ("admin", "manager"):
+        return await message.answer(Messages.NO_ACCESS)
+    pdf_name = "menu.pdf"
+    file_id = message.document.file_id
+    async with Bot(token=TOKEN).context(True) as bot:
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        await bot.download_file(file_path, pdf_name)
+    update_result = await get_menu_by_kind(session, pdf_name)
+    if update_result:
+        result_text = "Меню обновилось"
+    else:
+        result_text = "Возникла ошибка, меню не обновилось, попробуй ещё раз."
+    if os.path.exists(pdf_name):
+        os.remove(pdf_name)
+    await message.answer(result_text)
 
 if __name__ == "__main__":
     # phone = "+79998887766"

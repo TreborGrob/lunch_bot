@@ -1,7 +1,7 @@
 import asyncio
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import MANAGER, ADMIN
+from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES
 from tg_bot.essence.dishes import DishModel
 from tg_bot.essence.groups import GroupModel
 from tg_bot.essence.items_in_order import ItemsOrderModel
@@ -11,6 +11,7 @@ from tg_bot.essence.weekly_menu import WeeklyMenuModel
 from tg_bot.services.create_text_total_lunch_order import lunch_picker
 from tg_bot.services.days_operations import days_week, next_work_day_string
 from tg_bot.services.parse_menu import get_dict_all_dishes
+from tg_bot.services.resources import Messages
 from tg_bot.services.send_message_bot import send_message_bot
 from tg_bot.services.statuses import StatusOrder
 
@@ -107,7 +108,9 @@ async def reminder(session: AsyncSession):
     for user in users:
         if user.telegram_id:
             if user.telegram_id not in confirmed_users:  # Если у пользователя нет подтвержденного заказа
-                await send_message_bot(user.telegram_id, f"Не забудь выбрать обед на {next_work_date} до 13:00!")
+                await send_message_bot(user.telegram_id, Messages.REMINDER_TEXT.format(next_work_date=next_work_date,
+                                                                                       hour=REMINDER_TEXT_HOUR,
+                                                                                       minute=REMINDER_TEXT_MINUTES))
                 await asyncio.sleep(1)
 
 
@@ -127,18 +130,18 @@ async def total_text_lunch_send_admin(session: AsyncSession):
         text = text[4000:]
 
         # Проверяем незакрытые HTML-теги
-        if "<code>" in part and "</code>" not in part:
-            part += "</code>"
-        elif "</code>" in part and "<code>" not in part:
-            part = "<code>" + part
+        if Messages.CODE_OPEN_TAG in part and Messages.CODE_CLOSE_TAG not in part:
+            part += Messages.CODE_CLOSE_TAG
+        elif Messages.CODE_CLOSE_TAG in part and Messages.CODE_OPEN_TAG not in part:
+            part = Messages.CODE_OPEN_TAG + part
 
         messages.append(part)
 
     if text:
-        if "<code>" in text and "</code>" not in text:
-            text += "</code>"
-        elif "</code>" in text and "<code>" not in text:
-            text = "<code>" + text
+        if Messages.CODE_OPEN_TAG in text and Messages.CODE_CLOSE_TAG not in text:
+            text += Messages.CODE_CLOSE_TAG
+        elif Messages.CODE_CLOSE_TAG in text and Messages.CODE_OPEN_TAG not in text:
+            text = Messages.CODE_OPEN_TAG + text
         messages.append(text)
 
     # Отправляем сообщения
@@ -152,7 +155,7 @@ async def total_text_lunch_send_admin(session: AsyncSession):
     next_work_date = await next_work_day_string()
     if next_work_date:
         order_table = Order(session)
-        await order_table.update_orders_by_date(next_work_date)
+        await order_table.close_orders_by_date(next_work_date)
 
 if __name__ == "__main__":
     pass
