@@ -14,7 +14,8 @@ test/
 .vscode/
 *.swp
 *.swo
-
+calendar.xlsx
+year_days.json
 # Логи
 *.log
 logs/

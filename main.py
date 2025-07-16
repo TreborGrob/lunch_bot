@@ -26,6 +26,8 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
         DATABASE_URL,
         pool_size=10,
         max_overflow=5,
+        pool_use_lifo=True,
+        pool_recycle=3600,
         pool_pre_ping=True
     )
     async_session = async_sessionmaker(engine, expire_on_commit=False)
