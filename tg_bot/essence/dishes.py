@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship
 
 from tg_bot.essence.base_model import Base
 
-# TODO:
 
 class DishModel(Base):
     """Модель SQLAlchemy для таблицы dishes"""
