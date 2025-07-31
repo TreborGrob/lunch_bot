@@ -57,21 +57,24 @@ class Dish:
         result = await self.session.execute(query)
         return result.scalars().all() if is_many else result.scalar_one_or_none()
 
-    async def create_dish(self, **kwargs) -> Column[int] | None:  # Сомнительно !
+    async def create_dish(self, **kwargs) -> int | None:
         """
         Создает новое блюдо или возвращает ID существующего
         Возвращает ID блюда или None в случае ошибки
         """
         try:
+            # Проверка на существующее блюдо
+            existing = await self.session.execute(
+                select(DishModel.id).where(DishModel.name == kwargs['name'])
+            )
+            existing_id = existing.scalar_one_or_none()
+            if existing_id:
+                return existing_id
+
+            # Создаем новое
             dish = DishModel(**kwargs)
             self.session.add(dish)
-            await self.session.flush()
-
-            if not dish.id:  # Если ID не был сгенерирован (уже существует)
-                existing = await self._execute_query(
-                    select(DishModel.id).where(DishModel.name == kwargs['name']))
-                return existing
-
+            await self.session.flush()  # Получим сгенерированный ID
             await self.session.commit()
             return dish.id
         except Exception as e:

@@ -15,6 +15,7 @@ from tg_bot.essence.groups import Group
 from tg_bot.essence.items_in_order import ItemsOrder
 from tg_bot.essence.orders import Order
 from tg_bot.essence.users import User
+from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.services.days_operations import next_work_day_string, create_matrices, download_calendar_excel, \
     parse_calendar
 from tg_bot.services.handler_dishes import dishes_in_side_items
@@ -198,12 +199,11 @@ async def commands_admin(message: Message):
 async def add_bread(message: Message, command: CommandObject, session: AsyncSession):
     if int(message.from_user.id) in (ADMIN, MANAGER):
         dish_table = Dish(session)
+        weekly_menu = WeeklyMenu(session)
         arguments = command.args
-        data = arguments.split(" ")
-        amount = int(data[-1])
+        amount = int(arguments)
         group_table = Group(session)
         bread_group = await group_table.get_group_by_name("Выпечка")
-        # print(bread_group)
         if not bread_group:
             await message.answer("Группа 'Выпечка' не найдена")
             return
@@ -216,9 +216,10 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
             calories="40",
             group_id=bread_group.id
         )
-
         if dish_id:
-            await message.answer(f"Хлеб добавлен в количестве {amount} шт.")
+            await message.answer(f"Хлеб добавлен стоимостью {amount} за шт.")
+            for day_id in range(1, 7):
+                await weekly_menu.add_dish_to_day(day_id, dish_id)
         else:
             await message.answer("Ошибка при добавлении хлеба")
 

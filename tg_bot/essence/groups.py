@@ -58,15 +58,12 @@ class Group:
             return None
 
     async def get_group_by_name(self, group_name: str) -> Optional[GroupModel]:
-        """
-        Получает группу по названию (регистронезависимо)
-        Возвращает объект GroupModel или None если не найдено
-        """
         try:
             result = await self.session.execute(
-                select(GroupModel)
-                .where(func.lower(GroupModel.name) == literal(func.lower(group_name))
-                       ))
+                select(GroupModel).where(
+                    func.lower(GroupModel.name) == group_name.lower()
+                )
+            )
             return result.scalar_one_or_none()
         except Exception as e:
             print(f"Error getting group by name: {e}")
