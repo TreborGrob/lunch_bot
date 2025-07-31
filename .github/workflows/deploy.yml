@@ -34,19 +34,20 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
             cat <<EOT > $DEPLOY_DIR/.env
-            TOKEN=${{ secrets.TOKEN }}
-            ADMIN=${{ secrets.ADMIN }}
-            MANAGER=${{ secrets.MANAGER }}
-            FIX_SUM=${{ secrets.FIX_SUM }}
-            currency=${{ secrets.CURRENCY }}
-            LOG_FILE=${{ secrets.LOG_FILE }}
-            PORT_DB=${{ secrets.PORT_DB }}
-            USER_DB=${{ secrets.USER_DB }}
-            PASSWORD_DB=${{ secrets.PASSWORD_DB }}
-            HOST_DB=${{ secrets.HOST_DB }}
-            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
-            chmod 600 $DEPLOY_DIR/.env
-            EOT
+          TOKEN=${{ secrets.TOKEN }}
+          ADMIN=${{ secrets.ADMIN }}
+          MANAGER=${{ secrets.MANAGER }}
+          FIX_SUM=${{ secrets.FIX_SUM }}
+          currency=${{ secrets.CURRENCY }}
+          LOG_FILE=${{ secrets.LOG_FILE }}
+          PORT_DB=${{ secrets.PORT_DB }}
+          USER_DB=${{ secrets.USER_DB }}
+          PASSWORD_DB=${{ secrets.PASSWORD_DB }}
+          HOST_DB=${{ secrets.HOST_DB }}
+          DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+          EOT
+          
+          chmod 600 $DEPLOY_DIR/.env
           EOF
 
       - name: Run Docker Compose
