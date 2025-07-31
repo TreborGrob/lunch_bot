@@ -58,8 +58,8 @@ async def contact_getter(message: Message, session: AsyncSession):
     user_name = message.from_user.first_name if message.from_user.first_name else message.from_user.last_name
     if message.contact.user_id == user_id:
         phone_number = message.contact.phone_number
-        if re.fullmatch(r"[+]?\d{11}", phone_number):
-            phone_number = int(phone_number[2:])
+        if re.fullmatch(r"[+78]\d{10}", phone_number):
+            phone_number = int(phone_number[-10:])
             user_table = User(session)
             user = await user_table.get_user_by_phone(phone_number)
             if user and not user.telegram_id:
