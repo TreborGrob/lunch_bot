@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional, List
-from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger
+from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from tg_bot.essence.base_model import Base
 from sqlalchemy import CheckConstraint
+
+from tg_bot.services.statuses import StatusEmployee
 
 
 @dataclass
@@ -42,7 +44,7 @@ class User:
     async def get_user_by_tg_id(self, tg_id: int) -> Optional[UserData]:
         """Получает пользователя по telegram_id"""
         result = await self.session.execute(
-            select(UserModel).where(UserModel.telegram_id == tg_id)
+            select(UserModel).where(UserModel.telegram_id == literal(tg_id))
         )
         user = result.scalar_one_or_none()
         if not user:
@@ -54,7 +56,7 @@ class User:
     async def get_user_by_phone(self, phone_number: int) -> Optional[UserData]:
         """Получает пользователя по номеру телефона"""
         result = await self.session.execute(
-            select(UserModel).where(UserModel.phone_number == phone_number)
+            select(UserModel).where(UserModel.phone_number == literal(phone_number))
         )
         user = result.scalar_one_or_none()
         if not user:
@@ -73,10 +75,22 @@ class User:
             for user in users
         ]
 
+    async def get_all_active_users(self) -> List[UserData]:
+        """Получает пользователей, которые работают"""
+        result = await self.session.execute(
+            select(UserModel).where(UserModel.status == literal("office"))
+        )
+        users = result.scalars().all()
+        return [
+            UserData(
+                **{k: getattr(user, k) for k in ('telegram_id', 'username', 'phone_number', 'status', 'last_msg_id')})
+            for user in users
+        ]
+
     async def get_last_msg_id(self, user_id: int) -> Optional[int]:
         """Получает last_msg_id пользователя"""
         result = await self.session.execute(
-            select(UserModel.last_msg_id).where(UserModel.telegram_id == user_id)
+            select(UserModel.last_msg_id).where(UserModel.telegram_id == literal(user_id))
         )
         return result.scalar_one_or_none()
 
@@ -85,7 +99,7 @@ class User:
         try:
             await self.session.execute(
                 update(UserModel)
-                .where(UserModel.telegram_id == user_id)
+                .where(UserModel.telegram_id == literal(user_id))
                 .values(last_msg_id=id_msg)
             )
             await self.session.commit()
@@ -108,7 +122,7 @@ class User:
         try:
             await self.session.execute(
                 update(UserModel)
-                .where(UserModel.telegram_id == telegram_id)
+                .where(UserModel.telegram_id == literal(telegram_id))
                 .values(**kwargs)
             )
             await self.session.commit()
@@ -121,7 +135,7 @@ class User:
         try:
             await self.session.execute(
                 update(UserModel)
-                .where(UserModel.phone_number == phone_number)
+                .where(UserModel.phone_number == literal(phone_number))
                 .values(**kwargs)
             )
             await self.session.commit()
@@ -133,7 +147,7 @@ class User:
         """Удаляет пользователя по номеру телефона"""
         try:
             await self.session.execute(
-                delete(UserModel).where(UserModel.phone_number == phone_number)
+                delete(UserModel).where(UserModel.phone_number == literal(phone_number))
             )
             await self.session.commit()
         except Exception as e:
