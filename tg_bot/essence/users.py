@@ -18,7 +18,7 @@ class UserData:
 class UserModel(Base):
     __tablename__ = 'users'
 
-    telegram_id = Column(BigInteger, unique=True, default=0)
+    telegram_id = Column(BigInteger, default=0)
     username = Column(String(50))
     phone_number = Column(BigInteger, primary_key=True, default=0)
     status = Column(String(10), default='office')

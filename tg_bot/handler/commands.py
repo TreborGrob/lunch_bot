@@ -203,6 +203,7 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
         amount = int(data[-1])
         group_table = Group(session)
         bread_group = await group_table.get_group_by_name("Выпечка")
+        # print(bread_group)
         if not bread_group:
             await message.answer("Группа 'Выпечка' не найдена")
             return
