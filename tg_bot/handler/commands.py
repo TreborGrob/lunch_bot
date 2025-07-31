@@ -60,6 +60,7 @@ async def contact_getter(message: Message, session: AsyncSession):
         phone_number = message.contact.phone_number
         if re.fullmatch(r"(\+7|7|8)\d{10}", phone_number):
             phone_number = int(phone_number[-10:])
+            logging.error(f"{phone_number}")
             user_table = User(session)
             user = await user_table.get_user_by_phone(phone_number)
             if user and not user.telegram_id:
