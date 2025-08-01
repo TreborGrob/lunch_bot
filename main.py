@@ -3,16 +3,16 @@ import logging
 import platform
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tg_bot.essence.base_model import Base
-from config import TOKEN, DATABASE_URL, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES, TIMEZONE, \
+from config import TOKEN, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES, TIMEZONE, \
     LAST_MINUTE_FOR_ORDER
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.database import register_global_middlewares
 from tg_bot.handler import commands, handlers
 from tg_bot.middlewares.roles import RoleMiddleware
+from tg_bot.services.database_engine import get_session_pool
 from tg_bot.services.send_message_bot import send_report_admin
 from tg_bot.services.set_bot_commands import set_default_commands
 from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin
@@ -20,17 +20,7 @@ from tg_bot.services.work_with_log import setup_logging
 from pytz import timezone
 
 
-async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
-    # Создаем движок и сессии
-    engine = create_async_engine(
-        DATABASE_URL,
-        pool_size=10,
-        max_overflow=5,
-        pool_use_lifo=True,
-        pool_recycle=3600,
-        pool_pre_ping=True
-    )
-    async_session = async_sessionmaker(engine, expire_on_commit=False)
+async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engine):
 
     # Создаем все таблицы одним запросом
     async with engine.begin() as conn:
@@ -73,8 +63,7 @@ async def main():
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
 
     # Создаем движок для основного пула соединений
-    engine = create_async_engine(DATABASE_URL)
-    session_pool = async_sessionmaker(engine, expire_on_commit=False)
+    session_pool, engine = get_session_pool()
 
     # Инициализация диспетчера
     dp = Dispatcher(storage=storage)
@@ -85,7 +74,7 @@ async def main():
     dp['session_pool'] = session_pool
 
     # Инициализация бота
-    await on_startup(bot, scheduler)
+    await on_startup(bot, scheduler, session_pool, engine)
 
     # Подключаем роутеры
     dp.include_routers(commands.router, handlers.router)
