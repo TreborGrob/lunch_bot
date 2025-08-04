@@ -27,7 +27,7 @@ REMINDER_MINUTES: int = 30
 TIMEZONE = "Europe/Moscow"
 REMINDER_TEXT_HOUR = "13"
 REMINDER_TEXT_MINUTES = "00"
-MIN_AMOUNT_ORDER = 130
+MIN_AMOUNT_ORDER = 110
 
 if __name__ == '__main__':
     print('ADMIN: ', ADMIN)
