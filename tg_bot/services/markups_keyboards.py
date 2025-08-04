@@ -14,14 +14,13 @@ from tg_bot.services.resources import Buttons
 from tg_bot.services.statuses import StatusOrder
 
 
-async def groups_markup(session: AsyncSession, user_id: int) -> InlineKeyboardMarkup:
+async def groups_markup(session: AsyncSession, user_id: int, date: str) -> InlineKeyboardMarkup:
     """Клавиатура групп блюд"""
     builder = InlineKeyboardBuilder()
     group_table = Group(session)
     orders_table = Order(session)
 
     groups = await group_table.get_all_groups()
-    date = await next_work_day_string()
 
     if date:
         order = await orders_table.get_order_by_user_id_and_date_status(user_id, date)
@@ -41,10 +40,9 @@ async def groups_markup(session: AsyncSession, user_id: int) -> InlineKeyboardMa
     return builder.as_markup()
 
 
-async def items_group_markup(group_id: int, session: AsyncSession, user_id: int) -> InlineKeyboardMarkup:
+async def items_group_markup(group_id: int, session: AsyncSession, user_id: int, date: str) -> InlineKeyboardMarkup:
     """Клавиатура блюд в группе"""
     builder = InlineKeyboardBuilder()
-    date = await next_work_day_string()
 
     if not date:
         return builder.as_markup()
@@ -62,8 +60,8 @@ async def items_group_markup(group_id: int, session: AsyncSession, user_id: int)
         dishes_in_order = await items_order_table.get_dishes_for_order(order_id)
         items_in_order = [item["dish"].id for item in dishes_in_order]
 
-    current_datetime = datetime.now()
-    day_id = current_datetime.weekday() + 2
+    parsed_date = datetime.strptime(date, "%Y-%m-%d")
+    day_id = parsed_date.weekday() + 1  # Понедельник = 1, Воскресенье = 7
     dishes = await weekly_menu_table.get_dishes_for_day_by_group(day_id, group_id)
     for dish in dishes:
         builder.row(

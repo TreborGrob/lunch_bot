@@ -28,12 +28,12 @@ async def group_menu(callback: CallbackQuery, session: AsyncSession):
     try:
         await callback.message.edit_text(
             Messages.SELECT_DISHES,
-            reply_markup=await items_group_markup(group_id, session, user_id)
+            reply_markup=await items_group_markup(group_id, session, user_id, date_tomorrow)
         )
     except TelegramBadRequest:
         await callback.message.edit_text(
             Messages.SELECT_LUNCH.format(date_tomorrow=date_tomorrow),
-            reply_markup=await groups_markup(session, user_id)
+            reply_markup=await groups_markup(session, user_id, date_tomorrow)
         )
 
 
@@ -66,7 +66,7 @@ async def add_item_in_cart(callback: CallbackQuery, session: AsyncSession):
             await items_order_table.add_dish_to_order(order_id, id_dish, 1)
             await order_table.update_order(user_id, date_tomorrow, amount=order_amount + item.amount)
             await callback.message.edit_reply_markup(
-                reply_markup=await items_group_markup(item.group_id, session, user_id)
+                reply_markup=await items_group_markup(item.group_id, session, user_id, date_tomorrow)
             )
             await callback.answer()
     except Exception as e:
@@ -125,7 +125,7 @@ async def remove_item_in_cart(callback: CallbackQuery, session: AsyncSession):
         await order_table.update_order(user_id, date_tomorrow, amount=order_amount)
 
         await callback.message.edit_reply_markup(
-            reply_markup=await items_group_markup(item.group_id, session, user_id)
+            reply_markup=await items_group_markup(item.group_id, session, user_id, date_tomorrow)
         )
         await callback.answer()
     except Exception as e:
@@ -171,7 +171,7 @@ async def give_menu(callback: CallbackQuery, session: AsyncSession):
     try:
         await callback.message.edit_text(
             Messages.SELECT_LUNCH.format(date_tomorrow=date_tomorrow),
-            reply_markup=await groups_markup(session, user_id)
+            reply_markup=await groups_markup(session, user_id, date_tomorrow)
         )
     except Exception as e:
         logger.error(f"Error in give_menu: {e}")

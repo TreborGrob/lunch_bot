@@ -19,7 +19,10 @@ async def lunch_picker(session: AsyncSession) -> str:
     user_repo = User(session)
     all_active_users = await user_repo.get_all_active_users()
     # Находим пользователей без заказов
-    users_with_orders = {data["user"].telegram_id for data in orders_data}
+    # users_with_orders = {data["user"].telegram_id for data in orders_data}
+    users_with_orders = []
+    for data in orders_data:
+        users_with_orders.append(data["user"].telegram_id)
     users_without_orders = [user for user in all_active_users if user.telegram_id not in users_with_orders]
     # Если есть пользователи без заказов и есть хотя бы один заказ
     if users_without_orders and orders_data:

@@ -82,7 +82,6 @@ async def menu_command(message: Message, session: AsyncSession):
     user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
-    date_tomorrow = await next_work_day_string()
     if user_data:
         if user_data.status == StatusEmployee.WORK.value:
             date = await next_work_day_string()
@@ -91,8 +90,8 @@ async def menu_command(message: Message, session: AsyncSession):
                 order = await order_table.get_order_by_user_id_and_date(user_id, date)
                 if not order:
                     await order_table.create_order(user_id, date)
-                await message.answer(f"Выбор обеда на {date_tomorrow}",
-                                     reply_markup=await groups_markup(session, user_id))
+                await message.answer(f"Выбор обеда на {date}",
+                                     reply_markup=await groups_markup(session, user_id, date))
             else:
                 await message.answer("Технические неполадки сообщите администратору бота.")
         else:
