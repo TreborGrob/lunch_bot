@@ -1,7 +1,7 @@
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from config import MIN_AMOUNT_ORDER
+from asyncio.log import logger
+from config import MIN_AMOUNT_ORDER, ADMIN
 from tg_bot.essence.groups import Group
 from tg_bot.essence.orders import Order
 from tg_bot.essence.items_in_order import ItemsOrder
@@ -10,37 +10,39 @@ from tg_bot.services.days_operations import next_work_day_string
 from tg_bot.services.resources import Messages
 from collections import Counter
 
+# TODO del logger
+
 
 async def lunch_picker(session: AsyncSession) -> str:
     next_date = await next_work_day_string()
     orders_data = await get_orders_with_dishes(session, next_date)
-
+    logger.error(orders_data)
     # Получаем всех активных пользователей
     user_repo = User(session)
     all_active_users = await user_repo.get_all_active_users()
     # Находим пользователей без заказов
-    # users_with_orders = {data["user"].telegram_id for data in orders_data}
-    users_with_orders = []
-    for data in orders_data:
-        users_with_orders.append(data["user"].telegram_id)
+    users_with_orders = {data["user"].telegram_id for data in orders_data}
+    logger.error(users_with_orders)
     users_without_orders = [user for user in all_active_users if user.telegram_id not in users_with_orders]
+    logger.error(users_without_orders)
     # Если есть пользователи без заказов и есть хотя бы один заказ
+    admin_order = next((order for order in orders_data if order["user"].telegram_id == ADMIN), None)
     if users_without_orders and orders_data:
-        # Находим самый дорогой заказ
-        most_expensive_order = max(orders_data, key=lambda x: x["amount_order"])
-
+        if admin_order:
+            base_order = admin_order
+        else:
+            base_order = max(orders_data, key=lambda x: x["amount_order"])
         # Копируем этот заказ для пользователей без заказов
         for user in users_without_orders:
             copied_order = {
                 "user": user,
-                "dishes": most_expensive_order["dishes"].copy(),
-                "amount_order": most_expensive_order["amount_order"]
+                "dishes": base_order["dishes"].copy(),
+                "amount_order": base_order["amount_order"]
             }
             orders_data.append(copied_order)
 
     result_lines = []
     user_dishes_list = []
-
     for data in orders_data:
         result_lines.append(format_user_order(data["user"], data["dishes"], data["amount_order"]))
         user_dishes_list.append(data["dishes"])
