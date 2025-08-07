@@ -16,7 +16,6 @@ from collections import Counter
 async def lunch_picker(session: AsyncSession) -> str:
     next_date = await next_work_day_string()
     orders_data = await get_orders_with_dishes(session, next_date)
-    logger.error(orders_data)
     # Получаем всех активных пользователей
     user_repo = User(session)
     all_active_users = await user_repo.get_all_active_users()
@@ -64,7 +63,7 @@ async def get_orders_with_dishes(session, date):
     items_order_repo = ItemsOrder(session)
     user_repo = User(session)
 
-    orders = await order_repo.get_confirm_orders_by_date(date)
+    orders = await order_repo.get_all_orders_by_date(date)
     results = []
 
     for order in orders:
