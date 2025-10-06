@@ -78,8 +78,12 @@ async def extract_dishes(text):
         weight = lines[i+1]
         price = lines[i+2]
 
-        # Проверяем, что вес и цена — числа (или число/число)
-        if not re.match(r'^\d+(?:/\d+)?$', weight) or not price.isdigit():
+        # Проверяем, что вес — это последовательность чисел, разделённых "/" или "\"
+        if not re.match(r'^\d+(?:[\\/]\d+)*$', weight):
+            break
+
+        # Цена должна быть числом
+        if not price.isdigit():
             break
 
         # Пропускаем номер строки, если есть
