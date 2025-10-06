@@ -64,35 +64,50 @@ async def extract_dishes(text):
     dishes = []
 
     i = 0
-    while i < len(lines) - 2:
-        name = lines[i]
+    while i < len(lines):
+        line = lines[i]
 
-        # Завершаем, если строка — это явно не название блюда
-        if re.search(r'меню|период|действия|не является', name.lower()):
+        if re.search(r'меню|период|действия|не является', line.lower()):
             break
 
-        # Обработка случая "12 Корн-дог"
-        if re.match(r'^\d+\s+\S+', name):
-            name = re.sub(r'^\d+\s+', '', name)
+        if re.fullmatch(r'^\d+$', line):
+            i += 1
+            continue
 
-        weight = lines[i+1]
-        price = lines[i+2]
+        parts = line.split()
+        if len(parts) < 3:
+            i += 1
+            continue
 
-        # Проверяем, что вес и цена — числа (или число/число)
-        if not re.match(r'^\d+(?:/\d+)?$', weight) or not price.isdigit():
-            break
+        start_idx = 0
+        if parts[0].isdigit():
+            start_idx = 1
 
-        # Пропускаем номер строки, если есть
-        if i + 3 < len(lines) and re.fullmatch(r'\d+', lines[i+3]):
-            i += 4
-        else:
-            i += 3
+        if len(parts) - start_idx < 3:
+            i += 1
+            continue
 
-        dishes.append({
-            "name": name,
-            "weight": weight,
-            "price": int(price)
-        })
+        # Более гибкая проверка веса
+        name_parts = parts[start_idx:-2]
+        name = ' '.join(name_parts)
+        weight = parts[-2]
+        price = parts[-1]
+
+        # Нормализуем и проверяем вес
+        weight = weight.replace('\\', '/')
+
+        # Проверяем, что вес состоит из цифр и разделителей
+        weight_valid = re.match(r'^[\d/]+$', weight) and any(c.isdigit() for c in weight)
+        price_valid = price.isdigit()
+
+        if weight_valid and price_valid:
+            dishes.append({
+                "name": name,
+                "weight": weight,
+                "price": int(price)
+            })
+
+        i += 1
 
     return dishes
 
