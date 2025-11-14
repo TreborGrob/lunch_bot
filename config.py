@@ -9,10 +9,10 @@ if os.path.exists(dotenv_path):
 
 TOKEN = os.getenv("TOKEN")
 ADMIN = int(os.getenv("ADMIN"))
+MANAGER = int(os.getenv("MANAGER"))
 NAME_BOT = os.getenv("NAME_BOT")
 currency = os.getenv("currency")
 FIX_SUM = int(os.getenv("FIX_SUM"))
-MANAGER = os.getenv("MANAGER")
 PORT_DB = int(os.getenv("PORT_DB"))
 USER_DB = os.getenv("USER_DB")
 PASSWORD_DB = os.getenv("PASSWORD_DB")
