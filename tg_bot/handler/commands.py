@@ -36,7 +36,7 @@ async def clear(message: Message, state: FSMContext):
 
 @router.message(Command("refresh"))
 async def reload_menu(message: Message, role: str):
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         await message.answer("Пришли pdf файл с меню.")
 
 
@@ -100,7 +100,7 @@ async def menu_command(message: Message, session: AsyncSession):
 
 @router.message(Command("calendar"))
 async def calendar_load(message: Message, command: CommandObject, role: str):
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         arguments = command.args
         data = arguments.split(" ")
         year = data[0]
@@ -148,7 +148,7 @@ async def my_order(message: Message, session: AsyncSession):
 
 @router.message(Command("add_user"))
 async def add_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -165,7 +165,7 @@ async def add_users(message: Message, command: CommandObject, session: AsyncSess
 
 @router.message(Command("del_user"))
 async def delete_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -184,7 +184,7 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
 async def commands_admin(message: Message, role: str):
     text_commands = ("/menu - меню\n"
                      "/my_order - мой заказ на сегодня\n")
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         text_commands += ("/refresh - обновление меню, использовать, если меню на сайте обновилось.\n"
                           "/set_status 9991234455 отпуск/больничный/работа - установка статуса\n"
                           "/add_user 9991234455 - добавление, можно несколько сразу, через пробел\n"
@@ -197,7 +197,7 @@ async def commands_admin(message: Message, role: str):
 
 @router.message(Command("add_bread"))
 async def add_bread(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ACCESS_ARRAY:
+    if role in ACCESS_ARRAY:
         dish_table = Dish(session)
         weekly_menu = WeeklyMenu(session)
         arguments = command.args
