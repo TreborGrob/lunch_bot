@@ -146,9 +146,10 @@ async def total_text_lunch_send_admin(session: AsyncSession):
 
     # Отправляем сообщения
     for message in messages:
-        await send_message_bot(MANAGER, message)
-        await asyncio.sleep(1)
         await send_message_bot(ADMIN, message)
+        await asyncio.sleep(1)
+    for message in messages:
+        await send_message_bot(MANAGER, message)
         await asyncio.sleep(1)
 
     # Обновляем статусы заказов

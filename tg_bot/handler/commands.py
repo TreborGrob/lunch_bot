@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ADMIN, MANAGER, TOKEN
+from config import TOKEN, ACCESS_ARRAY
 from tg_bot.essence.dishes import Dish
 from tg_bot.essence.groups import Group
 from tg_bot.essence.items_in_order import ItemsOrder
@@ -35,8 +35,8 @@ async def clear(message: Message, state: FSMContext):
 
 
 @router.message(Command("refresh"))
-async def reload_menu(message: Message):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+async def reload_menu(message: Message, role: str):
+    if role not in ACCESS_ARRAY:
         await message.answer("Пришли pdf файл с меню.")
 
 
@@ -99,8 +99,8 @@ async def menu_command(message: Message, session: AsyncSession):
 
 
 @router.message(Command("calendar"))
-async def calendar_load(message: Message, command: CommandObject):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+async def calendar_load(message: Message, command: CommandObject, role: str):
+    if role not in ACCESS_ARRAY:
         arguments = command.args
         data = arguments.split(" ")
         year = data[0]
@@ -147,8 +147,8 @@ async def my_order(message: Message, session: AsyncSession):
 
 
 @router.message(Command("add_user"))
-async def add_users(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+async def add_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ACCESS_ARRAY:
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -160,12 +160,12 @@ async def add_users(message: Message, command: CommandObject, session: AsyncSess
             text_msg += "\nдобавлены."
         await message.answer(text_msg)
     else:
-        await message.answer("Нет прав на данную команду.")
+        await message.answer(Messages.NO_ACCESS)
 
 
 @router.message(Command("del_user"))
-async def delete_users(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+async def delete_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ACCESS_ARRAY:
         arguments = command.args
         data_phones = arguments.split(" ")
         user_table = User(session)
@@ -177,14 +177,14 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
             text_msg += "\nудалены."
         await message.answer(text_msg)
     else:
-        await message.answer("Нет прав на данную команду.")
+        await message.answer(Messages.NO_ACCESS)
 
 
 @router.message(Command("commands"))
-async def commands_admin(message: Message):
+async def commands_admin(message: Message, role: str):
     text_commands = ("/menu - меню\n"
                      "/my_order - мой заказ на сегодня\n")
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+    if role not in ACCESS_ARRAY:
         text_commands += ("/refresh - обновление меню, использовать, если меню на сайте обновилось.\n"
                           "/set_status 9991234455 отпуск/больничный/работа - установка статуса\n"
                           "/add_user 9991234455 - добавление, можно несколько сразу, через пробел\n"
@@ -196,8 +196,8 @@ async def commands_admin(message: Message):
 
 
 @router.message(Command("add_bread"))
-async def add_bread(message: Message, command: CommandObject, session: AsyncSession):
-    if int(message.from_user.id) in (ADMIN, MANAGER):
+async def add_bread(message: Message, command: CommandObject, session: AsyncSession, role: str):
+    if role not in ACCESS_ARRAY:
         dish_table = Dish(session)
         weekly_menu = WeeklyMenu(session)
         arguments = command.args
@@ -226,7 +226,7 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
 
 @router.message(Command("set_status"))
 async def set_status(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
 
     user_table = User(session)
@@ -247,7 +247,7 @@ async def set_status(message: Message, command: CommandObject, session: AsyncSes
 
 @router.message(Command("lunch_picker"))
 async def lunch_picker_command(message: Message, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     try:
         text = await lunch_picker(session)
@@ -259,7 +259,7 @@ async def lunch_picker_command(message: Message, session: AsyncSession, role: st
 
 @router.message(Command("get_users"))
 async def get_status_users(message: Message, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     text = ""
     user_table = User(session)
@@ -272,7 +272,7 @@ async def get_status_users(message: Message, session: AsyncSession, role: str):
 
 @router.message(Command("read_log"))
 async def read_logfile(message: Message, role: str):
-    if role not in "admin":
+    if role != "admin":
         return await message.answer(Messages.NO_ACCESS)
     log_dir = "logs"
     log_file = os.path.join(log_dir, "bot.log")
@@ -284,7 +284,7 @@ async def read_logfile(message: Message, role: str):
 
 @router.message(Command("clear_next_day"))
 async def clear_next_day_orders(message: Message, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     next_work_day = await next_work_day_string()
     order_table = Order(session)
@@ -294,7 +294,7 @@ async def clear_next_day_orders(message: Message, session: AsyncSession, role: s
 
 @router.message(Command("set_name"))
 async def set_name_user(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     user_table = User(session)
     arguments = command.args
@@ -306,7 +306,7 @@ async def set_name_user(message: Message, command: CommandObject, session: Async
 
 @router.message(Command("update_price"))
 async def update_price_item(message: Message, command: CommandObject, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     dishes_table = Dish(session)
     arguments = command.args
@@ -325,7 +325,7 @@ async def update_price_item(message: Message, command: CommandObject, session: A
 
 @router.message(F.document)
 async def any_msg(message: Message, session: AsyncSession, role: str):
-    if role not in ("admin", "manager"):
+    if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
     pdf_name = "menu.pdf"
     file_id = message.document.file_id

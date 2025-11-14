@@ -16,7 +16,7 @@ class Messages:
     CODE_OPEN_TAG = "<code>"
     CODE_CLOSE_TAG = "</code>"
     BEING_LATE = "Опоздали, заявка уже отправлена.\nПриносите обед с собой."
-    NO_ACCESS = "У тебя нет доступа к этой команде."
+    NO_ACCESS = "Нет прав на данную команду."
     REMINDER_TEXT = "Не забудь выбрать обед на {next_work_date} до {hour}:{minute}!"
 
 
