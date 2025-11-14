@@ -127,7 +127,7 @@ class ItemsOrder:
 
     async def get_amount_for_order(self, order_id: int) -> int:
         """
-        Возвращает общее количество порций в заказе
+        Возвращает общюю сумму всех порций в заказе
         """
         result = await self.session.execute(
             select(func.coalesce(func.sum(DishModel.amount * ItemsOrderModel.count), 0))

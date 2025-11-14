@@ -4,8 +4,7 @@ from sqlalchemy import Column, Integer, String, select, update, delete, BigInteg
 from sqlalchemy.ext.asyncio import AsyncSession
 from tg_bot.essence.base_model import Base
 from sqlalchemy import CheckConstraint
-
-from tg_bot.services.statuses import StatusEmployee
+from asyncio.log import logger
 
 
 @dataclass
@@ -105,7 +104,7 @@ class User:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error setting last_msg_id: {e}")
+            logger.error(f"Error setting last_msg_id: {e}")
 
     async def add_user(self, phone_number: int):
         """Добавляет нового пользователя (только phone_number)"""
@@ -115,7 +114,7 @@ class User:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error adding user: {e}")
+            logger.error(f"Error adding user: {e}")
 
     async def update_user_by_id(self, telegram_id: int, **kwargs):
         """Обновляет данные пользователя по telegram_id"""
@@ -128,7 +127,7 @@ class User:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error updating user by id: {e}")
+            logger.error(f"Error updating user by id: {e}")
 
     async def update_user(self, phone_number: int, **kwargs):
         """Обновляет данные пользователя по номеру телефона"""
@@ -141,7 +140,7 @@ class User:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error updating user: {e}")
+            logger.error(f"Error updating user: {e}")
 
     async def delete_user(self, phone_number: int):
         """Удаляет пользователя по номеру телефона"""
@@ -152,4 +151,47 @@ class User:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error deleting user: {e}")
+            logger.error(f"Error deleting user: {e}")
+
+    async def create_balance_records_for_all_users(self, balance_model_class) -> int:
+        """Создает записи в балансе для всех пользователей, у которых их нет
+
+        Args:
+            balance_model_class: Класс модели баланса (BalanceModel)
+
+        Returns:
+            int: Количество созданных записей
+        """
+        try:
+            # Получаем всех пользователей
+            users = await self.get_all_users()
+
+            if not users:
+                return 0
+
+            # Получаем существующие записи баланса
+            result = await self.session.execute(
+                select(balance_model_class.user_id)
+            )
+            existing_user_ids = {row[0] for row in result.all()}
+
+            # Создаем записи только для тех пользователей, у которых их нет
+            created_count = 0
+            for user in users:
+                if user.telegram_id not in existing_user_ids and user.telegram_id != 0:
+                    balance_record = balance_model_class(
+                        user_id=user.telegram_id,
+                        balance=0
+                    )
+                    self.session.add(balance_record)
+                    created_count += 1
+
+            if created_count > 0:
+                await self.session.commit()
+
+            return created_count
+
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(f"Error creating balance records: {e}")
+            return 0

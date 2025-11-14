@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import List, Optional
 from sqlalchemy import Column, Integer, String, select, update, delete, BigInteger, Date, literal, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import relationship
 
 from tg_bot.services.statuses import StatusOrder

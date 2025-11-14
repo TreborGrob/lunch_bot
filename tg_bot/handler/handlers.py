@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from config import FIX_SUM, LAST_HOUR_FOR_ORDER, HOUR_OPEN_ORDER, TIMEZONE
+from tg_bot.essence.balance import Balance
 from tg_bot.essence.dishes import Dish
 from tg_bot.essence.items_in_order import ItemsOrder
 from tg_bot.essence.orders import Order
@@ -50,17 +51,18 @@ async def add_item_in_cart(callback: CallbackQuery, session: AsyncSession):
     items_order_table = ItemsOrder(session)
     order_table = Order(session)
     dish_table = Dish(session)
+    balance_table = Balance(session)
 
     try:
         item = await dish_table.get_dish_by_id(id_dish)
         if not item:
             await callback.answer(Messages.DISH_NOT_FOUND)
             return
-
+        balance_user = await balance_table.get_balance_by_user_id(user_id)
         order_id = await order_table.create_order(user_id, date_tomorrow)
         order_amount = await items_order_table.get_amount_for_order(order_id)
 
-        if (order_amount + item.amount) > FIX_SUM:
+        if (order_amount + item.amount) > (FIX_SUM + balance_user.balance):
             await callback.answer(Messages.ORDER_OVER_SUM, show_alert=True)
         else:
             await items_order_table.add_dish_to_order(order_id, id_dish, 1)
@@ -109,7 +111,7 @@ async def remove_item_in_cart(callback: CallbackQuery, session: AsyncSession):
         return
 
     id_dish = int(callback.data.split("_")[-1])
-    items_order_table = ItemsOrder(session)  # Передаем сессию вместо connect
+    items_order_table = ItemsOrder(session)
     order_table = Order(session)
     dish_table = Dish(session)
 
@@ -191,6 +193,7 @@ async def plus_item_in_cart(callback: CallbackQuery, session: AsyncSession):
     items_order_table = ItemsOrder(session)
     order_table = Order(session)
     dish_table = Dish(session)
+    balance_table = Balance(session)
 
     try:
         item = await dish_table.get_dish_by_id(id_dish)
@@ -204,7 +207,8 @@ async def plus_item_in_cart(callback: CallbackQuery, session: AsyncSession):
             return
 
         order_amount = await items_order_table.get_amount_for_order(order_id)
-        if (order_amount + item.amount) > FIX_SUM:
+        balance_user = await balance_table.get_balance_by_user_id(user_id)
+        if (order_amount + item.amount) > (FIX_SUM + balance_user.balance):
             await callback.answer(Messages.ORDER_OVER_SUM, show_alert=True)
         else:
             await items_order_table.add_dish_to_order(order_id, id_dish, 1)
@@ -285,6 +289,13 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
             text_user += Messages.CODE_OPEN_TAG
             text_user += "\n".join(user_lines)
             text_user += Messages.CODE_CLOSE_TAG
+        balance_table = Balance(session)
+        balance_user = await balance_table.get_balance_by_user_id(user_id)
+        difference_in_price = FIX_SUM - order.amount
+        if difference_in_price > 0:
+            await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
+        elif difference_in_price < 0:
+            await balance_table.update_balance(user_id, balance=balance_user.balance - difference_in_price)
         await callback.message.delete()
         await callback.message.answer(text_user)
     else:
@@ -292,4 +303,3 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
         order_data = await order_table.get_order_by_user_id_and_date(user_id, date)
         if order_data:
             await order_table.delete_order(order_data.id)
-

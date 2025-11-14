@@ -9,7 +9,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import TOKEN, ACCESS_ARRAY
+from config import TOKEN, ACCESS_ARRAY, currency
+from tg_bot.essence.balance import BalanceModel, Balance
 from tg_bot.essence.dishes import Dish
 from tg_bot.essence.groups import Group
 from tg_bot.essence.items_in_order import ItemsOrder
@@ -182,16 +183,19 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
 
 @router.message(Command("commands"))
 async def commands_admin(message: Message, role: str):
+    next_day = next_work_day_string()
     text_commands = ("/menu - меню\n"
-                     "/my_order - мой заказ на сегодня\n")
+                     "/my_order - мой заказ на сегодня\n"
+                     "/balance - мой баланс\n")
     if role in ACCESS_ARRAY:
         text_commands += ("/refresh - обновление меню, использовать, если меню на сайте обновилось.\n"
                           "/set_status 9991234455 отпуск/больничный/работа - установка статуса\n"
                           "/add_user 9991234455 - добавление, можно несколько сразу, через пробел\n"
                           "/del_user 9991234455 - удаление, можно несколько сразу, через пробел\n"
                           "/calendar 2025[год] https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
-                          "производственного календаря]"
-                          "/add_bread 3[цена] - добавление хлеба в выпечку")
+                          "производственного календаря]\n"
+                          "/add_bread 3[цена] - добавление хлеба в выпечку\n"
+                          f"/lunch_picker - просмотр заказа на {next_day}\n")
     await message.answer(text_commands)
 
 
@@ -312,15 +316,18 @@ async def update_price_item(message: Message, command: CommandObject, session: A
     arguments = command.args
     data = arguments.split(" ")
     amount = data[-1]
-    name_item = data[0]
-    if amount.isdigit():
-        try:
-            await dishes_table.update_dish(name=name_item, amount=int(amount))
-            await message.answer(f"У {name_item} цена обновлена на {int(amount)}.")
-        except Exception as e:
-            await message.answer(f"Ошибка: {e}")
-    else:
-        await message.answer("Некорректное исправление")
+    name_item = data[0].split("_")
+    name = " ".join(name_item)
+    item = await dishes_table.get_dish_by_name(name)
+    if item:
+        if amount.isdigit():
+            try:
+                await dishes_table.update_dish(dish_id=item.id, name=name, amount=int(amount))
+                await message.answer(f"У {name} цена обновлена на {int(amount)}.")
+            except Exception as e:
+                await message.answer(f"Ошибка: {e}")
+        else:
+            await message.answer("Некорректное исправление")
 
 
 @router.message(F.document)
@@ -341,6 +348,24 @@ async def any_msg(message: Message, session: AsyncSession, role: str):
     if os.path.exists(pdf_name):
         os.remove(pdf_name)
     await message.answer(result_text)
+
+
+@router.message(Command("create_balance_all"))
+async def create_balance_all_users(message: Message, session: AsyncSession, role: str):
+    if role not in ACCESS_ARRAY:
+        return await message.answer(Messages.NO_ACCESS)
+    user_table = User(session)
+    count_create_balances = await user_table.create_balance_records_for_all_users(BalanceModel)
+    await message.answer(f"Кол-во созданных кошельков = {count_create_balances} шт.")
+
+
+@router.message(Command("balance"))
+async def my_balance(message: Message, session: AsyncSession):
+    user_id = message.from_user.id
+    balance_table = Balance(session)
+    balance_data = await balance_table.get_balance_by_user_id(user_id)
+    if balance_data:
+        await message.answer(f"Баланс : {balance_data.balance} {currency}.")
 
 if __name__ == "__main__":
     # phone = "+79998887766"
