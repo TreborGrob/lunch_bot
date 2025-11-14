@@ -47,7 +47,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
         scheduler.add_job(
             func=total_text_lunch_send_admin,
             trigger='cron',
-            day='mon-fri',
+            day_of_week='mon-fri',
             hour=f'{LAST_HOUR_FOR_ORDER}',
             minute=f'{LAST_MINUTE_FOR_ORDER}',
             kwargs={'session': session}
@@ -55,7 +55,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
         scheduler.add_job(
             func=resetting_the_balance,
             trigger='cron',
-            day='thu',
+            day_of_week='thu',
             hour=f'{LAST_HOUR_FOR_ORDER}',
             minute=f'{LAST_MINUTE_FOR_ORDER}',
             kwargs={'session': session}
