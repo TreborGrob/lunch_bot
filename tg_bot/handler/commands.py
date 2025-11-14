@@ -183,7 +183,7 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
 
 @router.message(Command("commands"))
 async def commands_admin(message: Message, role: str):
-    next_day = next_work_day_string()
+    next_day = await next_work_day_string()
     text_commands = ("/menu - меню\n"
                      "/my_order - мой заказ на сегодня\n"
                      "/balance - мой баланс\n")
