@@ -194,8 +194,8 @@ async def commands_admin(message: Message, role: str):
                           "/del_user 9991234455 - удаление, можно несколько сразу, через пробел\n"
                           "/calendar 2025[год] https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
                           "производственного календаря]\n"
-                          "/add_bread 3[цена] - добавление хлеба в выпечку\n"
-                          f"/lunch_picker - просмотр заказа на {next_day}\n")
+                          "/add_bread 3[цена] - добавление хлеба в выпечку\n")
+        text_commands += f"/lunch_picker - просмотр заказа на {next_day}\n"
     await message.answer(text_commands)
 
 
