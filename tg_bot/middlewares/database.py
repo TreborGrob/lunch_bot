@@ -2,8 +2,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from aiogram import BaseMiddleware, Dispatcher
 from typing import Callable, Dict, Any, Awaitable
 
-from tg_bot.middlewares.roles import RoleMiddleware
-
 
 class DatabaseMiddleware(BaseMiddleware):
     def __init__(self, session_pool: async_sessionmaker):
@@ -34,10 +32,9 @@ def register_global_middlewares(dp: Dispatcher, session_pool: async_sessionmaker
     :param session_pool: Пул асинхронных сессий SQLAlchemy
     """
     db_middleware = DatabaseMiddleware(session_pool)
-    role_middleware = RoleMiddleware()
+
     # Для всех типов сообщений
     dp.update.outer_middleware(db_middleware)
-    dp.update.outer_middleware(role_middleware)
 
     # Альтернативно можно регистрировать для конкретных типов:
     # dp.message.middleware(db_middleware)

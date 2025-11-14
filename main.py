@@ -11,6 +11,7 @@ from config import TOKEN, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES, 
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.database import register_global_middlewares
 from tg_bot.handler import commands, handlers
+from tg_bot.middlewares.roles import RoleMiddleware
 from tg_bot.services.database_engine import get_session_pool
 from tg_bot.services.send_message_bot import send_report_admin
 from tg_bot.services.set_bot_commands import set_default_commands
@@ -80,6 +81,7 @@ async def main():
 
     # Регистрируем middleware
     register_global_middlewares(dp, session_pool)
+    dp.message.middleware(RoleMiddleware())
     # Запускаем бота
     await bot.delete_webhook(drop_pending_updates=True)
 
