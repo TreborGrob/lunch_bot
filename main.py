@@ -15,7 +15,7 @@ from tg_bot.middlewares.roles import RoleMiddleware
 from tg_bot.services.database_engine import get_session_pool
 from tg_bot.services.send_message_bot import send_report_admin
 from tg_bot.services.set_bot_commands import set_default_commands
-from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin
+from tg_bot.services.timer_schedule import reminder, total_text_lunch_send_admin, resetting_the_balance
 from tg_bot.services.work_with_log import setup_logging
 from pytz import timezone
 
@@ -47,7 +47,15 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
         scheduler.add_job(
             func=total_text_lunch_send_admin,
             trigger='cron',
-            day='*',
+            day='mon-fri',
+            hour=f'{LAST_HOUR_FOR_ORDER}',
+            minute=f'{LAST_MINUTE_FOR_ORDER}',
+            kwargs={'session': session}
+        )
+        scheduler.add_job(
+            func=resetting_the_balance,
+            trigger='cron',
+            day='thu',
             hour=f'{LAST_HOUR_FOR_ORDER}',
             minute=f'{LAST_MINUTE_FOR_ORDER}',
             kwargs={'session': session}

@@ -1,4 +1,4 @@
-import logging
+from asyncio.log import logger
 
 from sqlalchemy import Column, Integer, ForeignKey, select, func, update, delete, BigInteger, literal, exists, \
     UniqueConstraint
@@ -43,7 +43,7 @@ class ItemsOrder:
             dish_exists = await self.session.execute(
                 select(exists().where(DishModel.id == dish_id)))
             if not dish_exists.scalar():
-                logging.error(f"Dish {dish_id} does not exist")
+                logger.error(f"Dish {dish_id} does not exist")
                 return False
 
             # Добавляем или обновляем блюдо в заказе
@@ -61,7 +61,7 @@ class ItemsOrder:
 
         except Exception as e:
             await self.session.rollback()
-            logging.error(f"Error adding dish {dish_id} to order {order_id}: {e}")
+            logger.error(f"Error adding dish {dish_id} to order {order_id}: {e}")
             return False
 
     async def get_dishes_for_order(self, order_id: int) -> list[dict]:
@@ -123,7 +123,7 @@ class ItemsOrder:
                 await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            logging.error(f"Error removing dish from order: {e}")
+            logger.error(f"Error removing dish from order: {e}")
 
     async def get_amount_for_order(self, order_id: int) -> int:
         """
@@ -142,8 +142,8 @@ class ItemsOrder:
         try:
             result = await self.session.execute(delete(ItemsOrderModel))
             deleted_count = result.rowcount
-            logging.info(f"Deleted {deleted_count} items from all orders")
+            logger.info(f"Deleted {deleted_count} items from all orders")
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            logging.error(f"Error deleting order: {e}")
+            logger.error(f"Error deleting order: {e}")

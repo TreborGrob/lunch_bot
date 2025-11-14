@@ -2,6 +2,7 @@ import asyncio
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES
+from tg_bot.essence.balance import Balance
 from tg_bot.essence.dishes import DishModel
 from tg_bot.essence.groups import GroupModel
 from tg_bot.essence.items_in_order import ItemsOrderModel
@@ -157,6 +158,15 @@ async def total_text_lunch_send_admin(session: AsyncSession):
     if next_work_date:
         order_table = Order(session)
         await order_table.close_orders_by_date(next_work_date)
+
+
+async def resetting_the_balance(session: AsyncSession):
+    """
+    Обнуление баланса у всех пользователей
+    """
+    balance_table = Balance(session)
+    await balance_table.reset_all_balances()
+
 
 if __name__ == "__main__":
     pass
