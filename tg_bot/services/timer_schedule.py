@@ -99,7 +99,7 @@ async def reminder(session: AsyncSession):
     order_table = Order(session)
     users_table = User(session)
 
-    users = await users_table.get_all_users()
+    users = await users_table.get_all_active_users()
     orders = await order_table.get_all_orders_by_date(next_work_date)
 
     # Создаем множество пользователей, у которых есть подтвержденный заказ

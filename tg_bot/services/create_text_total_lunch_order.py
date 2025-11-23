@@ -1,7 +1,8 @@
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from asyncio.log import logger
-from config import MIN_AMOUNT_ORDER, ADMIN
+from config import MIN_AMOUNT_ORDER, ADMIN, FIX_SUM
+from tg_bot.essence.balance import Balance
 from tg_bot.essence.groups import Group
 from tg_bot.essence.orders import Order
 from tg_bot.essence.items_in_order import ItemsOrder
@@ -16,6 +17,7 @@ from collections import Counter
 async def lunch_picker(session: AsyncSession) -> str:
     next_date = await next_work_day_string()
     orders_data = await get_orders_with_dishes(session, next_date)
+    balance_repo = Balance(session)
     # Получаем всех активных пользователей
     user_repo = User(session)
     all_active_users = await user_repo.get_all_active_users()
@@ -24,15 +26,26 @@ async def lunch_picker(session: AsyncSession) -> str:
     logger.error(users_with_orders)
     users_without_orders = [user for user in all_active_users if user.telegram_id not in users_with_orders]
     logger.error(users_without_orders)
+
     # Если есть пользователи без заказов и есть хотя бы один заказ
-    admin_order = next((order for order in orders_data if order["user"].telegram_id == ADMIN), None)
     if users_without_orders and orders_data:
-        if admin_order:
-            base_order = admin_order
-        else:
-            base_order = max(orders_data, key=lambda x: x["amount_order"])
-        # Копируем этот заказ для пользователей без заказов
+        # Для каждого пользователя без заказа находим подходящий заказ
         for user in users_without_orders:
+            balance_user = await balance_repo.get_balance_by_user_id(user.telegram_id)
+            balance_for_order = balance_user.balance + FIX_SUM
+
+            # Ищем подходящие заказы для конкретного пользователя
+            suitable_orders = [order for order in orders_data if order["amount_order"] <= balance_for_order]
+
+            if suitable_orders:
+                # Берем максимальный по стоимости среди подходящих
+                base_order = max(suitable_orders, key=lambda x: x["amount_order"])
+
+            else:
+                # Берем минимальный по стоимости среди подходящих
+                base_order = min(suitable_orders, key=lambda x: x["amount_order"])
+
+            # Копируем заказ для пользователя
             copied_order = {
                 "user": user,
                 "dishes": base_order["dishes"].copy(),
