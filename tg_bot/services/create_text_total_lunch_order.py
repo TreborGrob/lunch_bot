@@ -46,7 +46,7 @@ async def lunch_picker(session: AsyncSession) -> str:
 
             else:
                 # Берем минимальный по стоимости среди подходящих
-                base_order = min(suitable_orders, key=lambda x: x["amount_order"])
+                base_order = min(orders_data, key=lambda x: x["amount_order"])
 
             # Копируем заказ для пользователя
             copied_order = {
