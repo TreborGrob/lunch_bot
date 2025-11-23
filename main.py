@@ -55,9 +55,9 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
         scheduler.add_job(
             func=resetting_the_balance,
             trigger='cron',
-            day_of_week=7,
+            day_of_week=6,
             hour=17,
-            minute=51,
+            minute=53,
             kwargs={'session': session}
         )
 
