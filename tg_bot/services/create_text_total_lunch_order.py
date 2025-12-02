@@ -1,7 +1,7 @@
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from asyncio.log import logger
-from config import MIN_AMOUNT_ORDER, ADMIN, FIX_SUM
+from config import MIN_AMOUNT_ORDER, FIX_SUM
 from tg_bot.essence.balance import Balance
 from tg_bot.essence.groups import Group
 from tg_bot.essence.orders import Order
@@ -23,9 +23,7 @@ async def lunch_picker(session: AsyncSession) -> str:
     all_active_users = await user_repo.get_all_active_users()
     # Находим пользователей без заказов
     users_with_orders = {data["user"].telegram_id for data in orders_data}
-    logger.error(users_with_orders)
     users_without_orders = [user for user in all_active_users if user.telegram_id not in users_with_orders]
-    logger.error(users_without_orders)
 
     # Если есть пользователи без заказов и есть хотя бы один заказ
     if users_without_orders and orders_data:
@@ -45,7 +43,7 @@ async def lunch_picker(session: AsyncSession) -> str:
                 base_order = max(suitable_orders, key=lambda x: x["amount_order"])
 
             else:
-                # Берем минимальный по стоимости среди подходящих
+                # Берем минимальный по стоимости среди всех сделанных заказов
                 base_order = min(orders_data, key=lambda x: x["amount_order"])
 
             # Копируем заказ для пользователя
@@ -55,7 +53,6 @@ async def lunch_picker(session: AsyncSession) -> str:
                 "amount_order": base_order["amount_order"]
             }
             orders_data.append(copied_order)
-
     result_lines = []
     user_dishes_list = []
     for data in orders_data:

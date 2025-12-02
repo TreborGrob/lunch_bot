@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 # Настройка системных переменных
 ENV PYTHONUNBUFFERED=1 \
-    FIX_SUM=200 \
+    FIX_SUM=250 \
     currency=₽ \
     LOG_FILE=lunch.log
 

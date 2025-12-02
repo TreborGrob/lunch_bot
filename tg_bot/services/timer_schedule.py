@@ -45,14 +45,9 @@ async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str) -> bool:
 
     # Подготовка блюд
     dish_list = []
-    seen_dish_names = set()
     for day, categories in dishes_dict.items():
         for category, dishes in categories.items():
             for dish in dishes:
-                dish_name = dish["name"]
-                if dish_name in seen_dish_names:
-                    continue  # пропускаем дубликаты
-                seen_dish_names.add(dish_name)
                 dish_list.append({
                     "name": dish["name"],
                     "weight": dish["weight"],
@@ -60,7 +55,9 @@ async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str) -> bool:
                     "group_id": group_map[category]
                 })
 
-    await session.execute(insert(DishModel), dish_list)
+    # Используем INSERT IGNORE для MySQL
+    stmt = insert(DishModel).values(dish_list).prefix_with('IGNORE')
+    await session.execute(stmt)
     await session.commit()
 
     # Получаем id-шники блюд

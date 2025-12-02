@@ -47,7 +47,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
         scheduler.add_job(
             func=total_text_lunch_send_admin,
             trigger='cron',
-            day_of_week='mon-fri',
+            day_of_week='0-4',
             hour=f'{LAST_HOUR_FOR_ORDER}',
             minute=f'{LAST_MINUTE_FOR_ORDER}',
             kwargs={'session': session}
