@@ -2,7 +2,7 @@ import enum
 
 
 class StatusOrder(enum.Enum):
-    CREATE = "create"
+    CREATE = "new"
     CONFIRM = "confirm"
     CLOSE = 'close'
 
