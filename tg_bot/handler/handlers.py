@@ -295,7 +295,7 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
         if difference_in_price > 0:
             await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
         elif difference_in_price < 0:
-            await balance_table.update_balance(user_id, balance=balance_user.balance - difference_in_price)
+            await balance_table.update_balance(user_id, balance=balance_user.balance - abs(difference_in_price))
         await callback.message.delete()
         await callback.message.answer(text_user)
     else:
