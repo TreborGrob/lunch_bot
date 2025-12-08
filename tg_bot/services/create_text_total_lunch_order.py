@@ -17,7 +17,6 @@ from collections import Counter
 async def lunch_picker(session: AsyncSession) -> str:
     next_date = await next_work_day_string()
     orders_data = await get_orders_with_dishes(session, next_date)
-    balance_repo = Balance(session)
     # Получаем всех активных пользователей
     user_repo = User(session)
     all_active_users = await user_repo.get_all_active_users()
@@ -27,10 +26,10 @@ async def lunch_picker(session: AsyncSession) -> str:
 
     # Если есть пользователи без заказов и есть хотя бы один заказ
     if users_without_orders and orders_data:
+        balance_repo = Balance(session)
         # Для каждого пользователя без заказа находим подходящий заказ
         for user in users_without_orders:
             balance_user = await balance_repo.get_balance_by_user_id(user.telegram_id)
-            logger.error(balance_user)
             if balance_user:
                 balance_for_order = balance_user.balance + FIX_SUM
             else:

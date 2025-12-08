@@ -289,13 +289,6 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
             text_user += Messages.CODE_OPEN_TAG
             text_user += "\n".join(user_lines)
             text_user += Messages.CODE_CLOSE_TAG
-        balance_table = Balance(session)
-        balance_user = await balance_table.get_balance_by_user_id(user_id)
-        difference_in_price = FIX_SUM - order.amount
-        if difference_in_price > 0:
-            await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
-        elif difference_in_price < 0:
-            await balance_table.update_balance(user_id, balance=balance_user.balance - abs(difference_in_price))
         await callback.message.delete()
         await callback.message.answer(text_user)
     else:

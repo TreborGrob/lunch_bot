@@ -1,7 +1,7 @@
 import asyncio
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES
+from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES, FIX_SUM
 from tg_bot.essence.balance import Balance
 from tg_bot.essence.dishes import DishModel
 from tg_bot.essence.groups import GroupModel
@@ -154,6 +154,19 @@ async def total_text_lunch_send_admin(session: AsyncSession):
     next_work_date = await next_work_day_string()
     if next_work_date:
         order_table = Order(session)
+        orders = await order_table.get_all_orders_by_date(next_work_date)
+        if orders:
+            balance_table = Balance(session)
+            for order in orders:
+                user_id = order.user_id
+                balance_user = await balance_table.get_balance_by_user_id(user_id)
+                if balance_user:
+                    difference_in_price = FIX_SUM - order.amount
+                    if difference_in_price > 0:
+                        await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
+                    elif difference_in_price < 0:
+                        await balance_table.update_balance(user_id,
+                                                           balance=balance_user.balance - abs(difference_in_price))
         await order_table.close_orders_by_date(next_work_date)
 
 
