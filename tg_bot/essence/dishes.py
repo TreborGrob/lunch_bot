@@ -57,9 +57,9 @@ class Dish:
         result = await self.session.execute(query)
         return result.scalars().all() if is_many else result.scalar_one_or_none()
 
-    async def create_dish(self, **kwargs) -> int | None:
+    async def create_dish(self, **kwargs) -> int | bool:
         """
-        Создает новое блюдо или возвращает ID существующего
+        Создает новое блюдо или возвращает ID существующего.
         Возвращает ID блюда или None в случае ошибки
         """
         try:
@@ -69,7 +69,7 @@ class Dish:
             )
             existing_id = existing.scalar_one_or_none()
             if existing_id:
-                return existing_id
+                return False
 
             # Создаем новое
             dish = DishModel(**kwargs)
@@ -80,7 +80,7 @@ class Dish:
         except Exception as e:
             await self.session.rollback()
             print(f"Error creating dish: {e}")
-            return None
+            return False
 
     async def get_dish_by_id(self, dish_id: int) -> Optional[DishData]:
         """Получает блюдо по ID"""

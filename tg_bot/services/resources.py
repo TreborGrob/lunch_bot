@@ -1,4 +1,7 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from config import currency
+from tg_bot.essence.dishes import DishData, Dish
 
 
 class Messages:
@@ -31,10 +34,25 @@ class Buttons:
     CROSS = "❌"
 
 
-async def create_description_for_dish(item):
+async def create_description_for_dish(item: DishData):
     description = (f"{item.name}\n\n"
                    f"{item.compound}\n\n"
                    f"Вес: {item.weight}\n\n"
                    f"Ккал: {item.calories}\n\n"
                    f"Цена: {item.amount} {currency}")
     return description
+
+
+async def create_dish_for_menu(name: str, amount: int, session: AsyncSession, group_id: int, weight: int = 0,
+                               compound: str = "", calories: int = 0) -> int | bool:
+    dish_table = Dish(session)
+    dish_id = await dish_table.create_dish(
+        name=name,
+        weight=f"{weight} гр.",
+        amount=amount,
+        compound=compound,
+        image_url="",
+        calories=calories,
+        group_id=group_id
+    )
+    return dish_id

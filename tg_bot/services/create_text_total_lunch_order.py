@@ -25,11 +25,11 @@ async def lunch_picker(session: AsyncSession) -> str:
         balance_repo = Balance(session)
         # Для каждого пользователя без заказа находим подходящий заказ
         for user in users_without_orders:
+            balance_for_order = FIX_SUM
             balance_user = await balance_repo.get_balance_by_user_id(user.telegram_id)
             if balance_user:
                 balance_for_order = balance_user.balance + FIX_SUM
-            else:
-                balance_for_order = FIX_SUM
+
             # Ищем подходящие заказы для конкретного пользователя
             suitable_orders = []
             for user_order in orders_data:

@@ -22,7 +22,7 @@ class CommandsTitle(enum.Enum):
     GET_USERS = "get_users"
     LUNCH_PICKER = "lunch_picker"
     SET_STATUS = "set_status"
-    ADD_BREAD = "add_bread"
+    ADD_DISH = "add_dish"
     COMMANDS = "commands"
     DEL_USER = "del_user"
     ADD_USER = "add_user"

@@ -21,7 +21,7 @@ from tg_bot.services.days_operations import next_work_day_string, create_matrice
     parse_calendar
 from tg_bot.services.handler_dishes import dishes_in_side_items
 from tg_bot.services.markups_keyboards import groups_markup, request_contact
-from tg_bot.services.resources import Messages
+from tg_bot.services.resources import Messages, create_dish_for_menu
 from tg_bot.services.collection_titles import StatusOrder, StatusEmployee, CommandsTitle
 from tg_bot.services.timer_schedule import get_menu_by_kind, lunch_picker
 from tg_bot.services.work_with_log import tail
@@ -192,40 +192,35 @@ async def commands_admin(message: Message, role: str):
                           f"/{CommandsTitle.SET_STATUS.value} 9991234455 отпуск/больничный/работа - установка статуса\n"
                           f"/{CommandsTitle.ADD_USER.value} 9991234455 - добавление, можно несколько сразу, через пробел\n"
                           f"/{CommandsTitle.DEL_USER.value} 9991234455 - удаление, можно несколько сразу, через пробел\n"
-                          f"/{CommandsTitle.CALENDAR.value} 2025[год] https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
+                          f"/{CommandsTitle.CALENDAR.value} 2025 https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
                           f"производственного календаря]\n"
-                          f"/{CommandsTitle.ADD_BREAD.value} 3[цена] - добавление хлеба в выпечку\n")
+                          f"/{CommandsTitle.ADD_DISH.value} [категория] [наименование] [цена] - добавление блюда в категорию\n")
         text_commands += f"/{CommandsTitle.LUNCH_PICKER.value} - просмотр заказа на {next_day}\n"
     await message.answer(text_commands)
 
 
-@router.message(Command(CommandsTitle.ADD_BREAD.value))
-async def add_bread(message: Message, command: CommandObject, session: AsyncSession, role: str):
+@router.message(Command(CommandsTitle.ADD_DISH.value))
+async def add_dish_for_menu(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role in ACCESS_ARRAY:
-        dish_table = Dish(session)
+
         weekly_menu = WeeklyMenu(session)
         arguments = command.args
-        amount = int(arguments)
+        arg_pack = arguments.split()
+        amount = int(arg_pack[-1])
+        group_name = arg_pack[0]
+        dish_name = arg_pack[1]
         group_table = Group(session)
-        bread_group = await group_table.get_group_by_name("Выпечка")
-        if not bread_group:
-            await message.answer("Группа 'Выпечка' не найдена")
+        group_id = await group_table.get_group_by_name(group_name)
+        if not group_id:
+            await message.answer(f"Категория {group_name} не найдена")
             return
-        dish_id = await dish_table.create_dish(
-            name="Хлеб",
-            weight="5 гр.",
-            amount=amount,
-            compound="мука, вода, яйцо",
-            image_url="",
-            calories="40",
-            group_id=bread_group.id
-        )
+        dish_id = await create_dish_for_menu(dish_name, amount, session, group_id)
         if dish_id:
-            await message.answer(f"Хлеб добавлен стоимостью {amount} за шт.")
+            await message.answer(f"{dish_name} добавлен стоимостью {amount} за шт. в категорию {group_name}")
             for day_id in range(1, 7):
                 await weekly_menu.add_dish_to_day(day_id, dish_id)
         else:
-            await message.answer("Ошибка при добавлении хлеба")
+            await message.answer(f"Ошибка при добавлении, либо уже существует.")
 
 
 @router.message(Command(CommandsTitle.SET_STATUS.value))
