@@ -48,8 +48,8 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engin
             func=total_text_lunch_send_admin,
             trigger='cron',
             day_of_week='0-4',
-            hour=f'{LAST_HOUR_FOR_ORDER}',
-            minute=f'{LAST_MINUTE_FOR_ORDER}',
+            hour=14,
+            minute=45,
             kwargs={'session': session}
         )
         scheduler.add_job(
@@ -106,7 +106,7 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        setup_logging()
+        # setup_logging()
         if platform.system() == 'Windows':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())

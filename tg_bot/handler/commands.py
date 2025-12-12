@@ -317,7 +317,7 @@ async def update_price_item(message: Message, command: CommandObject, session: A
     if item:
         if amount.isdigit():
             try:
-                await dishes_table.update_dish(dish_id=item.id, name=name, amount=int(amount))
+                await dishes_table.update_dish(dish_id=item.id, amount=int(amount))
                 await message.answer(f"У {name} цена обновлена на {int(amount)}.")
             except Exception as e:
                 await message.answer(f"Ошибка: {e}")
