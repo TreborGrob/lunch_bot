@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from collections import defaultdict
+from collections import Counter
 from datetime import datetime
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandObject
@@ -22,26 +22,26 @@ from tg_bot.services.days_operations import next_work_day_string, create_matrice
 from tg_bot.services.handler_dishes import dishes_in_side_items
 from tg_bot.services.markups_keyboards import groups_markup, request_contact
 from tg_bot.services.resources import Messages
-from tg_bot.services.statuses import StatusOrder, StatusEmployee
+from tg_bot.services.collection_titles import StatusOrder, StatusEmployee, CommandsTitle
 from tg_bot.services.timer_schedule import get_menu_by_kind, lunch_picker
 from tg_bot.services.work_with_log import tail
 
 router = Router()
 
 
-@router.message(Command("clear"))
+@router.message(Command(CommandsTitle.CLEAR.value))
 async def clear(message: Message, state: FSMContext):
     await state.clear()
     await message.answer_sticker(sticker="CAACAgIAAxkBAAIBZmXTPPzuBeK3Q1faFSbEk3xv9JH2AAJABgACU7H3A9q1WauGxd5MNAQ")
 
 
-@router.message(Command("refresh"))
+@router.message(Command(CommandsTitle.REFRESH.value))
 async def reload_menu(message: Message, role: str):
     if role in ACCESS_ARRAY:
         await message.answer("Пришли pdf файл с меню.")
 
 
-@router.message(Command("start"))
+@router.message(Command(CommandsTitle.START.value))
 async def start_bot(message: Message, session: AsyncSession):
     user_id = message.from_user.id
     user_table = User(session)
@@ -78,7 +78,7 @@ async def contact_getter(message: Message, session: AsyncSession):
         await message.answer("Принимается только ваш номер.")
 
 
-@router.message(Command("menu"))
+@router.message(Command(CommandsTitle.MENU.value))
 async def menu_command(message: Message, session: AsyncSession):
     user_table = User(session)
     user_id = message.from_user.id
@@ -99,7 +99,7 @@ async def menu_command(message: Message, session: AsyncSession):
             await message.answer("Попросите администратора поменять ваш статус для заказа обеда.")
 
 
-@router.message(Command("calendar"))
+@router.message(Command(CommandsTitle.CALENDAR.value))
 async def calendar_load(message: Message, command: CommandObject, role: str):
     if role in ACCESS_ARRAY:
         arguments = command.args
@@ -113,10 +113,10 @@ async def calendar_load(message: Message, command: CommandObject, role: str):
         await message.answer(f"{year} г. - календарь загружен")
 
 
-@router.message(Command("my_order"))
+@router.message(Command(CommandsTitle.MY_ORDER.value))
 async def my_order(message: Message, session: AsyncSession):
     result_lines = []
-    combined_dish_counter = defaultdict(int)
+    combined_dish_counter = Counter()
     user_table = User(session)
     user_id = message.from_user.id
     user_data = await user_table.get_user_by_tg_id(user_id)
@@ -147,7 +147,7 @@ async def my_order(message: Message, session: AsyncSession):
         await message.answer(text_msg)
 
 
-@router.message(Command("add_user"))
+@router.message(Command(CommandsTitle.ADD_USER.value))
 async def add_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role in ACCESS_ARRAY:
         arguments = command.args
@@ -164,7 +164,7 @@ async def add_users(message: Message, command: CommandObject, session: AsyncSess
         await message.answer(Messages.NO_ACCESS)
 
 
-@router.message(Command("del_user"))
+@router.message(Command(CommandsTitle.DEL_USER.value))
 async def delete_users(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role in ACCESS_ARRAY:
         arguments = command.args
@@ -181,25 +181,25 @@ async def delete_users(message: Message, command: CommandObject, session: AsyncS
         await message.answer(Messages.NO_ACCESS)
 
 
-@router.message(Command("commands"))
+@router.message(Command(CommandsTitle.COMMANDS.value))
 async def commands_admin(message: Message, role: str):
     next_day = await next_work_day_string()
-    text_commands = ("/menu - меню\n"
-                     "/my_order - мой заказ на сегодня\n"
-                     "/balance - мой баланс\n")
+    text_commands = (f"/{CommandsTitle.MENU.value} - меню\n"
+                     f"/{CommandsTitle.MY_ORDER.value} - мой заказ на сегодня\n"
+                     f"/{CommandsTitle.BALANCE.value} - мой баланс\n")
     if role in ACCESS_ARRAY:
-        text_commands += ("/refresh - обновление меню, использовать, если меню на сайте обновилось.\n"
-                          "/set_status 9991234455 отпуск/больничный/работа - установка статуса\n"
-                          "/add_user 9991234455 - добавление, можно несколько сразу, через пробел\n"
-                          "/del_user 9991234455 - удаление, можно несколько сразу, через пробел\n"
-                          "/calendar 2025[год] https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
-                          "производственного календаря]\n"
-                          "/add_bread 3[цена] - добавление хлеба в выпечку\n")
-        text_commands += f"/lunch_picker - просмотр заказа на {next_day}\n"
+        text_commands += (f"/{CommandsTitle.REFRESH.value} - обновление меню, использовать, если меню на сайте обновилось.\n"
+                          f"/{CommandsTitle.SET_STATUS.value} 9991234455 отпуск/больничный/работа - установка статуса\n"
+                          f"/{CommandsTitle.ADD_USER.value} 9991234455 - добавление, можно несколько сразу, через пробел\n"
+                          f"/{CommandsTitle.DEL_USER.value} 9991234455 - удаление, можно несколько сразу, через пробел\n"
+                          f"/{CommandsTitle.CALENDAR.value} 2025[год] https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
+                          f"производственного календаря]\n"
+                          f"/{CommandsTitle.ADD_BREAD.value} 3[цена] - добавление хлеба в выпечку\n")
+        text_commands += f"/{CommandsTitle.LUNCH_PICKER.value} - просмотр заказа на {next_day}\n"
     await message.answer(text_commands)
 
 
-@router.message(Command("add_bread"))
+@router.message(Command(CommandsTitle.ADD_BREAD.value))
 async def add_bread(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role in ACCESS_ARRAY:
         dish_table = Dish(session)
@@ -228,28 +228,28 @@ async def add_bread(message: Message, command: CommandObject, session: AsyncSess
             await message.answer("Ошибка при добавлении хлеба")
 
 
-@router.message(Command("set_status"))
+@router.message(Command(CommandsTitle.SET_STATUS.value))
 async def set_status(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
-
+    relax_statuses = ("отдых", "больничный", "отпуск")
     user_table = User(session)
     arguments = command.args
     data = arguments.split(" ")
     phone_num = int(data[0])
     try:
         if re.fullmatch(r"\d{10}", data[0]):
-            if data[1].lower() in ("отдых", "больничный", "отпуск"):
-                status = "relax"
+            if data[1].lower() in relax_statuses:
+                status = StatusEmployee.RELAX.value
             else:
-                status = "office"
+                status = StatusEmployee.WORK.value
             await user_table.update_user(phone_num, status=status)
             await message.answer(f"Статус {phone_num} обновлён на {data[1]}")
     except Exception as e:
         await message.answer(f"Ошибка обновления статуса: {e}")
 
 
-@router.message(Command("lunch_picker"))
+@router.message(Command(CommandsTitle.LUNCH_PICKER.value))
 async def lunch_picker_command(message: Message, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -261,7 +261,7 @@ async def lunch_picker_command(message: Message, session: AsyncSession, role: st
         await message.answer("Произошла ошибка при формировании заказов")
 
 
-@router.message(Command("get_users"))
+@router.message(Command(CommandsTitle.GET_USERS.value))
 async def get_status_users(message: Message, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -274,7 +274,7 @@ async def get_status_users(message: Message, session: AsyncSession, role: str):
     await message.answer(text)
 
 
-@router.message(Command("read_log"))
+@router.message(Command(CommandsTitle.READ_LOG.value))
 async def read_logfile(message: Message, role: str):
     if role != "admin":
         return await message.answer(Messages.NO_ACCESS)
@@ -286,7 +286,7 @@ async def read_logfile(message: Message, role: str):
                          f'{last_lines}')
 
 
-@router.message(Command("clear_next_day"))
+@router.message(Command(CommandsTitle.CLEAR_NEXT_DAY.value))
 async def clear_next_day_orders(message: Message, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -296,7 +296,7 @@ async def clear_next_day_orders(message: Message, session: AsyncSession, role: s
     await message.answer(f"Заказы на {next_work_day} очищены.")
 
 
-@router.message(Command("set_name"))
+@router.message(Command(CommandsTitle.SET_NAME.value))
 async def set_name_user(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -308,7 +308,7 @@ async def set_name_user(message: Message, command: CommandObject, session: Async
     await message.answer(f"Пользователю с номером {phone_num} присвоен username = {data[-1]}")
 
 
-@router.message(Command("update_price"))
+@router.message(Command(CommandsTitle.UPDATE_PRICE.value))
 async def update_price_item(message: Message, command: CommandObject, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -350,7 +350,7 @@ async def any_msg(message: Message, session: AsyncSession, role: str):
     await message.answer(result_text)
 
 
-@router.message(Command("create_balance_all"))
+@router.message(Command(CommandsTitle.CREATE_BALANCE_ALL.value))
 async def create_balance_all_users(message: Message, session: AsyncSession, role: str):
     if role not in ACCESS_ARRAY:
         return await message.answer(Messages.NO_ACCESS)
@@ -359,7 +359,7 @@ async def create_balance_all_users(message: Message, session: AsyncSession, role
     await message.answer(f"Кол-во созданных кошельков = {count_create_balances} шт.")
 
 
-@router.message(Command("balance"))
+@router.message(Command(CommandsTitle.BALANCE.value))
 async def my_balance(message: Message, session: AsyncSession):
     user_id = message.from_user.id
     balance_table = Balance(session)

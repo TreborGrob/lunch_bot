@@ -1,7 +1,7 @@
 import datetime
 import logging
 from asyncio.log import logger
-from collections import defaultdict
+from collections import Counter
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery
@@ -16,7 +16,7 @@ from tg_bot.services.days_operations import next_work_day_string, get_day_of_wee
 from tg_bot.services.handler_dishes import dishes_in_side_items
 from tg_bot.services.markups_keyboards import groups_markup, items_group_markup, cart_items_markup, back_menu_markup
 from tg_bot.services.resources import Messages, create_description_for_dish
-from tg_bot.services.statuses import StatusOrder
+from tg_bot.services.collection_titles import StatusOrder
 
 router = Router()
 
@@ -89,7 +89,7 @@ async def view_item(callback: CallbackQuery, session: AsyncSession):
             await callback.answer(Messages.DISH_NOT_FOUND)
             return
 
-        description = create_description_for_dish(item)
+        description = await create_description_for_dish(item)
 
         await callback.message.edit_text(
             description,
@@ -276,7 +276,7 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
         order = await order_table.get_order_by_user_id_and_date(user_id, date)
         await order_table.update_order(user_id, date, status=StatusOrder.CONFIRM.value)
         items_order_table = ItemsOrder(session)
-        user_dish_counter = defaultdict(int)
+        user_dish_counter = Counter()
         user_lines = []
         dishes = await items_order_table.get_dishes_for_order(order.id)
         text_user = Messages.ORDER_YOUR_FOR_DATE.format(date=date)

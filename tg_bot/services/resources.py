@@ -31,7 +31,7 @@ class Buttons:
     CROSS = "❌"
 
 
-def create_description_for_dish(item):
+async def create_description_for_dish(item):
     description = (f"{item.name}\n\n"
                    f"{item.compound}\n\n"
                    f"Вес: {item.weight}\n\n"

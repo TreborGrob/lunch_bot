@@ -1,6 +1,5 @@
-from collections import defaultdict
+from collections import Counter
 from sqlalchemy.ext.asyncio import AsyncSession
-from tg_bot.essence.dishes import DishData
 from tg_bot.essence.groups import Group
 
 
@@ -17,12 +16,13 @@ async def dishes_in_side_items(dishes, session: AsyncSession):
     supplement_soup = []  # Добавки для супа
     syrniki_count = 0  # Количество сырников
     smetana_count = 0  # Кол-во сметаны
-    dish_counter = defaultdict(int)  # Для подсчёта всех блюд
+    dish_counter = Counter()  # Для подсчёта всех блюд
 
     for item in dishes:
         dish = item['dish']
         count = item['count']
         group_name = ids_groups.get(dish.group_id, '')
+        dish_words = dish.name.lower().split()
         # Проверка на группы и ключевые слова
         if 'каша' in dish.name.lower() or group_name == 'Гарниры':
             garnishes.append((dish.name, count))
@@ -31,19 +31,19 @@ async def dishes_in_side_items(dishes, session: AsyncSession):
         elif group_name == 'Первые блюда':
             soups.append((dish.name, count))
         elif group_name == 'Добавки':
-            if 'сметана' in dish.name.lower().split():
+            if 'сметана' in dish_words:
                 smetana_count += count
-            elif dish.name.lower() in ['зелень', 'гренки']:
+            elif any(word in ['зелень', 'гренки'] for word in dish_words):
                 supplement_soup.append((dish.name, count))
-            elif dish.name.lower() in ['мед', 'сгущенка', 'мёд', 'сгущёнка']:
+            elif any(word in ['мед', 'сгущенка', 'мёд', 'сгущёнка'] for word in dish_words):
                 supplement_syrnik.append((dish.name, count))
             else:
                 supplement_garnish.append((dish.name, count))
-        elif 'сосиска' in dish.name.lower() or 'купаты' in dish.name.lower():
+        elif 'сосиска' in dish_words or 'купаты' in dish_words:
             mains.append((dish.name, count))
-        elif "сгущенка" in dish.name.lower():
+        elif "сгущенка" in dish_words:
             supplement_syrnik.append((dish.name, count))
-        elif dish.name.lower() == 'сырник':
+        elif 'сырник' in dish_words:
             syrniki_count += count
         else:
             dish_counter[dish.name] += count
@@ -84,9 +84,9 @@ async def dishes_in_side_items(dishes, session: AsyncSession):
 
     # Сырники + Сметана + Сгущенка объединяются
     if syrniki_count > 0:
-        syrniki_line = "Сырник" if syrniki_count == 1 else f"{syrniki_count} Сырника"
+        syrniki_line = "Сырник" if syrniki_count == 1 else f"Сырник * {syrniki_count}"
         if smetana_count > 0:
-            syrniki_line += f" + Сметана"
+            syrniki_line += " + Сметана"
             if smetana_count > 1:
                 syrniki_line += f" * {smetana_count}"
             smetana_count = 0

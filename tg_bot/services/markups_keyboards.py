@@ -11,7 +11,7 @@ from tg_bot.essence.orders import Order
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.services.days_operations import next_work_day_string
 from tg_bot.services.resources import Buttons
-from tg_bot.services.statuses import StatusOrder
+from tg_bot.services.collection_titles import StatusOrder
 
 
 async def groups_markup(session: AsyncSession, user_id: int, date: str) -> InlineKeyboardMarkup:

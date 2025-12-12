@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, String, select, update, delete, BigInteg
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 
-from tg_bot.services.statuses import StatusOrder
+from tg_bot.services.collection_titles import StatusOrder
 from tg_bot.essence.base_model import Base
 
 

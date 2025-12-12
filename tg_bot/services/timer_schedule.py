@@ -14,7 +14,7 @@ from tg_bot.services.days_operations import days_week, next_work_day_string
 from tg_bot.services.parse_menu import get_dict_all_dishes
 from tg_bot.services.resources import Messages
 from tg_bot.services.send_message_bot import send_message_bot
-from tg_bot.services.statuses import StatusOrder
+from tg_bot.services.collection_titles import StatusOrder
 
 
 async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str) -> bool:
@@ -162,11 +162,8 @@ async def total_text_lunch_send_admin(session: AsyncSession):
                 balance_user = await balance_table.get_balance_by_user_id(user_id)
                 if balance_user:
                     difference_in_price = FIX_SUM - order.amount
-                    if difference_in_price > 0:
-                        await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
-                    elif difference_in_price < 0:
-                        await balance_table.update_balance(user_id,
-                                                           balance=balance_user.balance - abs(difference_in_price))
+                    await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
+
         await order_table.close_orders_by_date(next_work_date)
 
 
