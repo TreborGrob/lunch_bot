@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from dataclasses import dataclass
 from typing import List, Optional
 from sqlalchemy import select, update, delete, BigInteger
@@ -79,7 +80,7 @@ class Dish:
             return dish.id
         except Exception as e:
             await self.session.rollback()
-            print(f"Error creating dish: {e}")
+            logger.error(f"Error creating dish: {e}")
             return False
 
     async def get_dish_by_id(self, dish_id: int) -> Optional[DishData]:
@@ -119,7 +120,7 @@ class Dish:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error updating dish: {e}")
+            logger.error(f"Error updating dish: {e}")
 
     async def delete_dishes(self):
         """Удаляет все блюда (очищает таблицу)"""
@@ -128,4 +129,4 @@ class Dish:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error deleting dishes: {e}")
+            logger.error(f"Error deleting dishes: {e}")

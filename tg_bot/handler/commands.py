@@ -126,8 +126,7 @@ async def my_order(message: Message, session: AsyncSession):
         date_for_txt = current_date.strftime('%d.%m.%Y')
         user_id = message.from_user.id
         order_table = Order(session)
-        order = await order_table.get_order_by_user_id_and_date_status(user_id, current_date_str,
-                                                                       StatusOrder.CLOSE.value)
+        order = await order_table.get_order_by_user_id_and_date(user_id, current_date_str)
         text_msg = f"Обед на {date_for_txt}\n\n"
         if order:
             items_order_table = ItemsOrder(session)

@@ -157,7 +157,7 @@ class Order:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error updating order: {e}")
+            logger.error(f"Error updating order: {e}")
 
     async def delete_order(self, order_id: int):
         """Удаляет заказ по ID"""
@@ -168,7 +168,7 @@ class Order:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error deleting order: {e}")
+            logger.error(f"Error deleting order: {e}")
 
     async def close_orders_by_date(self, date: str):
         """Закрывает все заказы на указанную дату"""
@@ -181,7 +181,7 @@ class Order:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error updating orders by date: {e}")
+            logger.error(f"Error updating orders by date: {e}")
 
     async def delete_orders_by_date(self, date):
         """Удаляет заказы за указанную дату"""
@@ -192,7 +192,7 @@ class Order:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error deleting order: {e}")
+            logger.error(f"Error deleting order: {e}")
 
     async def delete_all_orders(self):
         """Удаляет все заказы"""
@@ -203,4 +203,4 @@ class Order:
             await self.session.commit()
         except Exception as e:
             await self.session.rollback()
-            print(f"Error deleting order: {e}")
+            logger.error(f"Error deleting order: {e}")
