@@ -161,6 +161,7 @@ async def resetting_the_balance(session: AsyncSession):
     """
     Обнуление баланса у всех пользователей
     """
+
     balance_table = Balance(session)
     await balance_table.reset_all_balances()
 
