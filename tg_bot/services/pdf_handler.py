@@ -14,7 +14,3 @@ def get_text_from_pdf(path_pdf: str) -> str:
     # Закрытие документа
     pdf_document.close()
     return all_text
-
-
-if __name__ == "__main__":
-    print(get_text_from_pdf("C:\\Users\\Grob\\Documents\\МЕНЮ ПОСТНОЕ 2025 Г..pdf"))
