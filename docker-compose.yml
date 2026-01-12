@@ -5,6 +5,3 @@ services:
     restart: no # unless-stopped
     env_file:
       - /root/lunch-bot-deploy/.env
-    depends_on:
-      mysql:
-        condition: service_healthy
