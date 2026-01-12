@@ -39,6 +39,27 @@ class Balance:
             return None
         return BalanceData(**{f: getattr(order, f) for f in self._fields})
 
+    async def create_or_get_balance(self, user_id: int) -> BalanceData:
+        """Создает запись баланса для пользователя, если её нет, или возвращает существующую"""
+        # Сначала пытаемся найти существующую запись
+        existing_balance = await self.get_balance_by_user_id(user_id)
+
+        if existing_balance:
+            return existing_balance
+
+        # Если записи нет, создаем новую
+        try:
+            new_balance = BalanceModel(user_id=user_id, balance=0)
+            self.session.add(new_balance)
+            await self.session.commit()
+
+            # Обновляем объект, чтобы получить ID
+            await self.session.refresh(new_balance)
+            return self._to_balance_data(new_balance)
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(f"Error creating balance for user {user_id}: {e}")
+
     async def get_balance_by_user_id(self, user_id: int) -> Optional[BalanceData]:
         """Получает баланс по user_id"""
         result = await self.session.execute(

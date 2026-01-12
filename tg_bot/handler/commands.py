@@ -63,9 +63,11 @@ async def contact_getter(message: Message, session: AsyncSession):
             phone_number = int(phone_number[-10:])
             logging.error(f"{phone_number}")
             user_table = User(session)
+            balance_table = Balance(session)
             user = await user_table.get_user_by_phone(phone_number)
             if user and not user.telegram_id:
                 await user_table.update_user(phone_number, telegram_id=user_id, username=user_name)
+                await balance_table.create_or_get_balance(user_id=user_id)
                 await message.answer("Теперь можно делать заказ с помощью команды /menu",
                                      reply_markup=ReplyKeyboardRemove())
             elif not user:
@@ -191,8 +193,7 @@ async def commands_admin(message: Message, role: str):
                           f"/{CommandsTitle.SET_STATUS.value} 9991234455 отпуск/больничный/работа - установка статуса\n"
                           f"/{CommandsTitle.ADD_USER.value} 9991234455 - добавление, можно несколько сразу, через пробел\n"
                           f"/{CommandsTitle.DEL_USER.value} 9991234455 - удаление, можно несколько сразу, через пробел\n"
-                          f"/{CommandsTitle.CALENDAR.value} 2025 https://mtsz.tatarstan.ru/file/pub/pub_4334893.xlsx [ссылка на файл "
-                          f"производственного календаря]\n"
+                          f"/{CommandsTitle.CALENDAR.value} 2026 https://mtsz.tatarstan.ru/file/pub/pub_4757062.xlsx\n"
                           f"/{CommandsTitle.ADD_DISH.value} [категория] [наименование] [цена] - добавление блюда в категорию\n")
         text_commands += f"/{CommandsTitle.LUNCH_PICKER.value} - просмотр заказа на {next_day}\n"
     await message.answer(text_commands)
