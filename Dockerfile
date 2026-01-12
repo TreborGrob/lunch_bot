@@ -11,6 +11,7 @@ WORKDIR /lunch_bot
 
 # Устанавливаем зависимости
 COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 RUN pip install cryptography
 
