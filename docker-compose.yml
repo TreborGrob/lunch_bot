@@ -8,36 +8,3 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-
-  mysql:
-    image: mysql:8
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-    container_name: mysql
-    restart: no # unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${PASSWORD_DB}
-      MYSQL_DATABASE: ${DATABASE_NAME}
-      MYSQL_USER: ${USER_DB}
-      MYSQL_PASSWORD: ${PASSWORD_DB}
-    volumes:
-      - /opt/RobData:/var/lib/mysql
-    ports:
-      - "3307:3306"
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin
-    restart: no # unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      PMA_HOST: mysql
-      # PMA_USER: ${USER_DB}
-      # PMA_PASSWORD: ${PASSWORD_DB}
-      PMA_ARBITRARY: 0
-    depends_on:
-      - mysql
