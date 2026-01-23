@@ -3,7 +3,7 @@ import logging
 
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES, FIX_SUM
+from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, ZERO_MINUTES
 from tg_bot.essence.balance import Balance
 from tg_bot.essence.dishes import DishModel
 from tg_bot.essence.groups import GroupModel
@@ -120,7 +120,7 @@ async def reminder(session_pool: async_sessionmaker):
                 Messages.REMINDER_TEXT.format(
                     next_work_date=next_work_date,
                     hour=REMINDER_TEXT_HOUR,
-                    minute=REMINDER_TEXT_MINUTES
+                    minute=ZERO_MINUTES
                 )
             )
             await asyncio.sleep(1)

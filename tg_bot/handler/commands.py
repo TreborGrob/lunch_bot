@@ -22,7 +22,7 @@ from tg_bot.services.days_operations import next_work_day_string, create_matrice
 from tg_bot.services.handler_dishes import dishes_in_side_items
 from tg_bot.services.markups_keyboards import groups_markup, request_contact
 from tg_bot.services.resources import Messages, create_dish_for_menu
-from tg_bot.services.collection_titles import StatusOrder, StatusEmployee, CommandsTitle
+from tg_bot.services.collection_titles import StatusEmployee, CommandsTitle
 from tg_bot.services.timer_schedule import get_menu_by_kind, lunch_picker
 from tg_bot.services.work_with_log import tail
 
@@ -189,12 +189,16 @@ async def commands_admin(message: Message, role: str):
                      f"/{CommandsTitle.MY_ORDER.value} - мой заказ на сегодня\n"
                      f"/{CommandsTitle.BALANCE.value} - мой баланс\n")
     if role in ACCESS_ARRAY:
-        text_commands += (f"/{CommandsTitle.REFRESH.value} - обновление меню, использовать, если меню на сайте обновилось.\n"
+        text_commands += (f"/{CommandsTitle.REFRESH.value} - обновление меню, использовать, "
+                          f"если меню на сайте обновилось.\n"
                           f"/{CommandsTitle.SET_STATUS.value} 9991234455 отпуск/больничный/работа - установка статуса\n"
-                          f"/{CommandsTitle.ADD_USER.value} 9991234455 - добавление, можно несколько сразу, через пробел\n"
-                          f"/{CommandsTitle.DEL_USER.value} 9991234455 - удаление, можно несколько сразу, через пробел\n"
+                          f"/{CommandsTitle.ADD_USER.value} 9991234455 - "
+                          f"добавление, можно несколько сразу, через пробел\n"
+                          f"/{CommandsTitle.DEL_USER.value} 9991234455 - "
+                          f"удаление, можно несколько сразу, через пробел\n"
                           f"/{CommandsTitle.CALENDAR.value} 2026 https://mtsz.tatarstan.ru/file/pub/pub_4757062.xlsx\n"
-                          f"/{CommandsTitle.ADD_DISH.value} [категория] [наименование] [цена] - добавление блюда в категорию\n")
+                          f"/{CommandsTitle.ADD_DISH.value} [категория] [наименование] "
+                          f"[цена] - добавление блюда в категорию\n")
         text_commands += f"/{CommandsTitle.LUNCH_PICKER.value} - просмотр заказа на {next_day}\n"
     await message.answer(text_commands)
 
