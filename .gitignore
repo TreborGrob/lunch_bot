@@ -8,7 +8,7 @@ __pycache__/
 venv/
 pip-log.txt
 pip-delete-this-directory.txt
-test/
+tests/
 # IDE
 .idea/
 .vscode/
@@ -19,7 +19,7 @@ year_days.json
 # Логи
 *.log
 logs/
-
+pytest.ini
 # Системные
 .DS_Store
 Thumbs.db

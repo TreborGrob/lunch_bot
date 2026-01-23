@@ -1,6 +1,8 @@
 import asyncio
+import logging
+
 from sqlalchemy import delete, insert, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from config import MANAGER, ADMIN, REMINDER_TEXT_HOUR, REMINDER_TEXT_MINUTES, FIX_SUM
 from tg_bot.essence.balance import Balance
 from tg_bot.essence.dishes import DishModel
@@ -85,43 +87,59 @@ async def get_menu_by_kind(session: AsyncSession, path_pdf_file: str) -> bool:
     return True
 
 
-async def reminder(session: AsyncSession):
+async def reminder(session_pool: async_sessionmaker):
     """
     Отправляет напоминания пользователям, которые не подтвердили заказ
     """
     next_work_date = await next_work_day_string()
+
     if not next_work_date:
         return
 
-    order_table = Order(session)
-    users_table = User(session)
+    async with session_pool() as session:
+        order_table = Order(session)
+        users_table = User(session)
 
-    users = await users_table.get_all_active_users()
-    orders = await order_table.get_all_orders_by_date(next_work_date)
+        users = await users_table.get_all_active_users()
+        orders = await order_table.get_all_orders_by_date(next_work_date)
 
-    # Создаем множество пользователей, у которых есть подтвержденный заказ
-    confirmed_users = {order.user_id for order in orders if order.status in
-                       {StatusOrder.CONFIRM.value, StatusOrder.CLOSE.value}}
+        # Создаем множество пользователей, у которых есть подтверждённый заказ
+        confirmed_users = {order.user_id for order in orders if order.status in
+                           {StatusOrder.CONFIRM.value, StatusOrder.CLOSE.value}}
 
-    for user in users:
-        if user.telegram_id:
-            if user.telegram_id not in confirmed_users:  # Если у пользователя нет подтвержденного заказа
-                await send_message_bot(user.telegram_id, Messages.REMINDER_TEXT.format(next_work_date=next_work_date,
-                                                                                       hour=REMINDER_TEXT_HOUR,
-                                                                                       minute=REMINDER_TEXT_MINUTES))
-                await asyncio.sleep(1)
+        # Собираем список telegram_id у кого нет подтверждённого заказа
+        user_ids_to_remind = [
+            u.telegram_id for u in users
+            if u.telegram_id and u.telegram_id not in confirmed_users
+        ]
+
+    for tg_id in user_ids_to_remind:
+        try:
+            await send_message_bot(
+                tg_id,
+                Messages.REMINDER_TEXT.format(
+                    next_work_date=next_work_date,
+                    hour=REMINDER_TEXT_HOUR,
+                    minute=REMINDER_TEXT_MINUTES
+                )
+            )
+            await asyncio.sleep(1)
+        except Exception as e:
+            logging.error(f"Не удалось отправить напоминание {tg_id}: {e}")
 
 
-async def total_text_lunch_send_admin(session: AsyncSession):
+async def total_text_lunch_send_admin(session_pool: async_sessionmaker):
     """
     Формирует и отправляет итоговый заказ администратору
     """
     # Получаем текст заказа
-    text = await lunch_picker(session)
+    async with session_pool() as session:
+        text = await lunch_picker(session)
+
     if not text:
         return
 
-    # Разбиваем длинный текст на части
+        # Разбиваем длинный текст на части
     messages = []
     while len(text) > 4000:
         part = text[:4000]
@@ -153,17 +171,18 @@ async def total_text_lunch_send_admin(session: AsyncSession):
     # Обновляем статусы заказов
     next_work_date = await next_work_day_string()
     if next_work_date:
-        order_table = Order(session)
-        await order_table.close_orders_by_date(next_work_date)
+        async with session_pool() as session:
+            order_table = Order(session)
+            await order_table.close_orders_by_date(next_work_date)
 
 
-async def resetting_the_balance(session: AsyncSession):
+async def resetting_the_balance(session_pool: async_sessionmaker):
     """
     Обнуление баланса у всех пользователей
     """
-
-    balance_table = Balance(session)
-    await balance_table.reset_all_balances()
+    async with session_pool() as session:
+        balance_table = Balance(session)
+        await balance_table.reset_all_balances()
 
 
 if __name__ == "__main__":

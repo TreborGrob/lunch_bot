@@ -5,9 +5,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 from tg_bot.essence.base_model import Base
 from config import TOKEN, LAST_HOUR_FOR_ORDER, REMINDER_HOUR, REMINDER_MINUTES, TIMEZONE, \
-    LAST_MINUTE_FOR_ORDER
+    ZERO_MINUTES
 from tg_bot.essence.weekly_menu import WeeklyMenu
 from tg_bot.middlewares.database import register_global_middlewares
 from tg_bot.handler import commands, handlers
@@ -20,46 +22,46 @@ from tg_bot.services.work_with_log import setup_logging
 from pytz import timezone
 
 
-async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, async_session, engine):
+async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, session_maker: async_sessionmaker,
+                     engine: create_async_engine):
 
     # Создаем все таблицы одним запросом
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Инициализация данных и планировщика
-    async with async_session() as session:
-        # Устанавливаем команды бота
-        await set_default_commands(bot)
+    # Устанавливаем команды бота
+    await set_default_commands(bot)
 
-        # Инициализируем данные (если нужно)
+    # Инициализация данных и планировщика
+    async with session_maker() as session:
         weekly_menu_table = WeeklyMenu(session)
         await weekly_menu_table.initialize_days()
 
-        # Настраиваем планировщик задач
-        scheduler.add_job(
-            func=reminder,
-            trigger='cron',
-            day='*',
-            hour=f'{REMINDER_HOUR}',
-            minute=f'{REMINDER_MINUTES}',
-            kwargs={'session': session}
-        )
-        scheduler.add_job(
-            func=total_text_lunch_send_admin,
-            trigger='cron',
-            day_of_week='0-4',
-            hour=LAST_HOUR_FOR_ORDER,
-            minute=LAST_MINUTE_FOR_ORDER,
-            kwargs={'session': session}
-        )
-        scheduler.add_job(
-            func=resetting_the_balance,
-            trigger='cron',
-            day_of_week=3,
-            hour=f'{LAST_HOUR_FOR_ORDER}',
-            minute=f'{REMINDER_MINUTES}',
-            kwargs={'session': session}
-        )
+    # Настраиваем планировщик задач
+    scheduler.add_job(
+        func=reminder,
+        trigger='cron',
+        day='*',
+        hour=f'{REMINDER_HOUR}',
+        minute=f'{REMINDER_MINUTES}',
+        kwargs={'session': session_maker}
+    )
+    scheduler.add_job(
+        func=total_text_lunch_send_admin,
+        trigger='cron',
+        day_of_week='0-4',
+        hour=LAST_HOUR_FOR_ORDER,
+        minute=ZERO_MINUTES,
+        kwargs={'session': session_maker}
+    )
+    scheduler.add_job(
+        func=resetting_the_balance,
+        trigger='cron',
+        day_of_week=3,
+        hour=f'{LAST_HOUR_FOR_ORDER}',
+        minute=f'{REMINDER_MINUTES}',
+        kwargs={'session': session_maker}
+    )
 
 
 async def main():
