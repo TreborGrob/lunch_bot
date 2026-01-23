@@ -44,7 +44,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, session_maker: async
         day='*',
         hour=f'{REMINDER_HOUR}',
         minute=f'{REMINDER_MINUTES}',
-        kwargs={'session': session_maker}
+        kwargs={'session_pool': session_maker}
     )
     scheduler.add_job(
         func=total_text_lunch_send_admin,
@@ -52,7 +52,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, session_maker: async
         day_of_week='0-4',
         hour=LAST_HOUR_FOR_ORDER,
         minute=ZERO_MINUTES,
-        kwargs={'session': session_maker}
+        kwargs={'session_pool': session_maker}
     )
     scheduler.add_job(
         func=resetting_the_balance,
@@ -60,7 +60,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, session_maker: async
         day_of_week=3,
         hour=f'{LAST_HOUR_FOR_ORDER}',
         minute=f'{REMINDER_MINUTES}',
-        kwargs={'session': session_maker}
+        kwargs={'session_pool': session_maker}
     )
 
 
