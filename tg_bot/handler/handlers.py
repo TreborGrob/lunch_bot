@@ -51,18 +51,16 @@ async def add_item_in_cart(callback: CallbackQuery, session: AsyncSession):
     items_order_table = ItemsOrder(session)
     order_table = Order(session)
     dish_table = Dish(session)
-    balance_table = Balance(session)
 
     try:
         item = await dish_table.get_dish_by_id(id_dish)
         if not item:
             await callback.answer(Messages.DISH_NOT_FOUND)
             return
-        balance_user = await balance_table.get_balance_by_user_id(user_id)
         order_id = await order_table.create_order(user_id, date_tomorrow)
         order_amount = await items_order_table.get_amount_for_order(order_id)
 
-        if (order_amount + item.amount) > (FIX_SUM + balance_user.balance):
+        if (order_amount + item.amount) > FIX_SUM:
             await callback.answer(Messages.ORDER_OVER_SUM, show_alert=True)
         else:
             await items_order_table.add_dish_to_order(order_id, id_dish, 1)
@@ -193,7 +191,6 @@ async def plus_item_in_cart(callback: CallbackQuery, session: AsyncSession):
     items_order_table = ItemsOrder(session)
     order_table = Order(session)
     dish_table = Dish(session)
-    balance_table = Balance(session)
 
     try:
         item = await dish_table.get_dish_by_id(id_dish)
@@ -207,8 +204,7 @@ async def plus_item_in_cart(callback: CallbackQuery, session: AsyncSession):
             return
 
         order_amount = await items_order_table.get_amount_for_order(order_id)
-        balance_user = await balance_table.get_balance_by_user_id(user_id)
-        if (order_amount + item.amount) > (FIX_SUM + balance_user.balance):
+        if (order_amount + item.amount) > FIX_SUM:
             await callback.answer(Messages.ORDER_OVER_SUM, show_alert=True)
         else:
             await items_order_table.add_dish_to_order(order_id, id_dish, 1)
@@ -292,8 +288,7 @@ async def confirm_order(callback: CallbackQuery, session: AsyncSession):
         balance_table = Balance(session)
         balance_user = await balance_table.get_balance_by_user_id(user_id)
         if balance_user:
-            difference_in_price = FIX_SUM - order.amount
-            await balance_table.update_balance(user_id, balance=balance_user.balance + difference_in_price)
+            await balance_table.update_balance(user_id, balance=balance_user.balance + order.amount)
         await callback.message.delete()
         await callback.message.answer(text_user)
     else:

@@ -57,7 +57,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler, session_maker: async
     scheduler.add_job(
         func=resetting_the_balance,
         trigger='cron',
-        day_of_week=3,
+        day="last",
         hour=f'{LAST_HOUR_FOR_ORDER}',
         minute=f'{REMINDER_MINUTES}',
         kwargs={'session_pool': session_maker}

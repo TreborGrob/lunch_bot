@@ -63,11 +63,11 @@ async def contact_getter(message: Message, session: AsyncSession):
             phone_number = int(phone_number[-10:])
             logging.error(f"{phone_number}")
             user_table = User(session)
-            balance_table = Balance(session)
+            # balance_table = Balance(session)
             user = await user_table.get_user_by_phone(phone_number)
             if user and not user.telegram_id:
                 await user_table.update_user(phone_number, telegram_id=user_id, username=user_name)
-                await balance_table.create_or_get_balance(user_id=user_id)
+                # await balance_table.create_or_get_balance(user_id=user_id)
                 await message.answer("Теперь можно делать заказ с помощью команды /menu",
                                      reply_markup=ReplyKeyboardRemove())
             elif not user:
@@ -364,7 +364,7 @@ async def my_balance(message: Message, session: AsyncSession):
     balance_table = Balance(session)
     balance_data = await balance_table.get_balance_by_user_id(user_id)
     if balance_data:
-        await message.answer(f"Баланс : {balance_data.balance} {currency}.")
+        await message.answer(f"В этом месяце заказал на: {balance_data.balance} {currency}.")
 
 if __name__ == "__main__":
     # phone = "+79998887766"
