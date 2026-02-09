@@ -1,7 +1,7 @@
 import random
 from collections import Counter
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import MIN_AMOUNT_ORDER  # FIX_SUM
+from config import MIN_AMOUNT_ORDER, ADMIN  # FIX_SUM
 # from tg_bot.essence.balance import Balance
 from tg_bot.essence.orders import Order, OrderData
 from tg_bot.essence.items_in_order import ItemsOrder
@@ -23,10 +23,17 @@ async def lunch_picker(session: AsyncSession) -> str:
 
     # Если есть пользователи без заказов и есть хотя бы один заказ
     if users_without_orders and orders_data:
+        admin_order = None
+        for order_data in orders_data:
+            if order_data["user"].telegram_id == ADMIN:
+                admin_order = order_data["order"]
+                break
         # Для каждого пользователя без заказа находим подходящий заказ
         for user in users_without_orders:
-            base_order = random.choice([u_order["order"] for u_order in orders_data])
-
+            if user.phone_number == 9991641229 and admin_order:
+                base_order = admin_order
+            else:
+                base_order = random.choice([u_order["order"] for u_order in orders_data])
             # Копируем заказ для пользователя
             copied_order = {
                 "user": user,
